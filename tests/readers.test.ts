@@ -16,7 +16,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  * these prefixes must name a test that exists. Add a prefix when its chunk
  * is tagged green; never remove one.
  */
-const BUILT_PREFIXES: readonly string[] = ['P1.', 'P2.', 'P3A.'];
+const BUILT_PREFIXES: readonly string[] = ['P1.', 'P2.', 'P3A.', 'P3B.'];
 
 function testFiles(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

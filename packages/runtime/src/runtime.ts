@@ -155,6 +155,8 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
       terrain: (cell) => (sim.world ? sim.world.terrainDef[cell]! : 0),
       centerX: (cell) => (sim.world ? sim.world.centerX(cell) : 0),
       centerY: (cell) => (sim.world ? sim.world.centerY(cell) : 0),
+      neighbor: (cell, dir) => (sim.world ? sim.world.neighbor[cell * 6 + dir - 1]! : -1),
+      heightIn: (cell, x, y) => (sim.world ? sim.world.surfaceHeightIn(cell, x, y) : 0),
     },
     variable: (id) => sim.variables.get(id),
     stats: () => ({ entities: e.count, subscriptions: sim.bus.subscriptionCount, timers: sim.timers.count, queuedEvents: sim.bus.queued }),

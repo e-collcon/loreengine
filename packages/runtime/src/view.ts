@@ -68,6 +68,10 @@ export interface WorldView {
   terrain(cell: number): number;
   centerX(cell: number): number;
   centerY(cell: number): number;
+  /** The neighbor of `cell` in direction `dir` (1..6), or -1 off the map. */
+  neighbor(cell: number, dir: number): number;
+  /** Surface height at (x, y) as `cell` defines it; the point may lie on the cell's border. */
+  heightIn(cell: number, x: number, y: number): number;
 }
 
 export interface PresentationView {
@@ -112,3 +116,8 @@ export interface RuntimeView {
 export { World, edgeLevel, edgesConnect, modeBit, MODE_WALK, MODE_SWIM, MODE_FLY, SLOPED } from './world.ts';
 export { lintMap, lintProject, MAX_UNREACHABLE_AREAS } from './lint.ts';
 export type { LintWarning, LintCode } from './lint.ts';
+
+// Hex geometry the renderer needs to build terrain meshes. `render` may import
+// only `schema` and this entry point (spec 4.3), so the pure helpers pass through here.
+export { HEX_DIRS, cornerOffsetX, cornerOffsetY, edgeCornerA, edgeCornerB, oppositeDir } from '@loreengine/hexmath';
+export type { HexDir } from '@loreengine/hexmath';

@@ -1,0 +1,197 @@
+/**
+ * The game client: one runtime, one renderer, one input mapper, and the
+ * loop that joins them (spec 5.3). The client keeps the accumulator, calls
+ * `tick` as many times as real time requires (at most 5 per frame, so a
+ * stall never spirals), and renders with the leftover fraction as
+ * interpolation. The editor's playtest embeds this same client.
+ */
+import { PixiRenderer, followCamera } from '@loreengine/render';
+import type { TerrainPick } from '@loreengine/render';
+import { MS_PER_TICK, ROLE_BITS, createRuntime } from '@loreengine/runtime';
+import type { ClickOrder, Runtime } from '@loreengine/runtime';
+import type { Project, SaveState } from '@loreengine/schema';
+import { InputMapper, mouseCode } from './input.ts';
+
+export const MAX_TICKS_PER_FRAME = 5;
+/** World units the player may drift from the screen center before the camera follows. */
+export const CAMERA_DEADZONE = 1.5;
+
+export interface ClientOptions {
+  host: HTMLElement;
+  project: Project;
+  save?: SaveState | null;
+  seed?: number;
+  record?: boolean;
+  /** Start with the camera following the player. Default true. */
+  follow?: boolean;
+  zoom?: number;
+  /** Called after each rendered frame. */
+  onFrame?: (client: Client) => void;
+}
+
+export interface Client {
+  readonly runtime: Runtime;
+  readonly renderer: PixiRenderer;
+  readonly input: InputMapper;
+  /** The terrain under the cursor as of the last pointer move, or null. */
+  readonly hover: TerrainPick | null;
+  /** The last terrain the player clicked, or null. */
+  readonly lastPick: TerrainPick | null;
+  follow: boolean;
+  paused: boolean;
+  /** Frames rendered and ticks simulated so far. */
+  readonly frames: number;
+  /** Render one frame now, without advancing time (used for screenshots). */
+  renderNow(): void;
+  stop(): void;
+}
+
+export async function startClient(options: ClientOptions): Promise<Client> {
+  const { host, project } = options;
+  const runtime = createRuntime(project, options.save ?? null, {
+    seed: options.seed ?? 1,
+    clockMode: 'continuous',
+    record: options.record ?? false,
+  });
+  const view = runtime.view;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.display = 'block';
+  host.appendChild(canvas);
+  const size = (): [number, number] => [Math.max(1, host.clientWidth), Math.max(1, host.clientHeight)];
+  const [w0, h0] = size();
+  const renderer = await PixiRenderer.create(view, { canvas, width: w0, height: h0, resolution: Math.min(2, window.devicePixelRatio || 1) });
+  if (options.zoom !== undefined) renderer.setZoom(options.zoom);
+  const input = new InputMapper(project.inputActions);
+
+  let hover: TerrainPick | null = null;
+  let lastPick: TerrainPick | null = null;
+  let frames = 0;
+  let stopped = false;
+  const scratch: TerrainPick = { cell: -1, x: 0, y: 0, z: 0 };
+
+  const snapCamera = (): void => {
+    const p = view.entities.playerIndex();
+    if (p < 0) return;
+    renderer.camera.x = view.entities.x(p);
+    renderer.camera.y = view.entities.y(p);
+    renderer.camera.z = view.entities.z(p);
+  };
+  snapCamera();
+
+  const pointerAt = (event: MouseEvent): [number, number] => {
+    const rect = canvas.getBoundingClientRect();
+    return [event.clientX - rect.left, event.clientY - rect.top];
+  };
+  const updateHover = (event: MouseEvent): void => {
+    const [sx, sy] = pointerAt(event);
+    hover = renderer.pickTerrain(sx, sy, scratch) ? { ...scratch } : null;
+    input.setPointer(hover ? { x: hover.x, y: hover.y } : null);
+  };
+  /** Entities first, front-most in draw order; then the height-aware terrain pick (spec 7.9b). */
+  const orderAt = (event: MouseEvent): ClickOrder | null => {
+    const [sx, sy] = pointerAt(event);
+    const entity = renderer.pickEntity(sx, sy);
+    if (entity >= 0 && entity !== view.entities.playerIndex()) return { kind: 'entity', entity: view.entities.id(entity) };
+    if (!renderer.pickTerrain(sx, sy, scratch)) return null;
+    lastPick = { ...scratch };
+    renderer.setHighlight(scratch.cell);
+    return { kind: 'ground', x: scratch.x, y: scratch.y };
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (input.isBound(event.code)) event.preventDefault();
+    if (!event.repeat) input.press(event.code);
+  };
+  const onKeyUp = (event: KeyboardEvent): void => input.release(event.code);
+  const onMouseDown = (event: MouseEvent): void => {
+    updateHover(event);
+    const code = mouseCode(event.button);
+    input.press(code);
+    if (project.inputActions.some((a) => a.role === 'click' && a.defaultBindings.includes(code))) input.setOrder(orderAt(event));
+  };
+  const onMouseUp = (event: MouseEvent): void => input.release(mouseCode(event.button));
+  const onWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    renderer.setZoom(renderer.camera.zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1));
+  };
+  const onBlur = (): void => input.releaseAll();
+  const onContext = (event: Event): void => event.preventDefault();
+  const onResize = (): void => renderer.resize(...size());
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', onBlur);
+  window.addEventListener('resize', onResize);
+  canvas.addEventListener('mousemove', updateHover);
+  canvas.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('contextmenu', onContext);
+
+  let last = performance.now();
+  let accumulator = 0;
+  let raf = 0;
+
+  const client: Client = {
+    runtime,
+    renderer,
+    input,
+    get hover() {
+      return hover;
+    },
+    get lastPick() {
+      return lastPick;
+    },
+    follow: options.follow ?? true,
+    paused: false,
+    get frames() {
+      return frames;
+    },
+    renderNow() {
+      renderer.render(1);
+      frames++;
+    },
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('mouseup', onMouseUp);
+      renderer.destroy();
+      runtime.dispose();
+      canvas.remove();
+    },
+  };
+
+  const frame = (now: number): void => {
+    if (stopped) return;
+    raf = requestAnimationFrame(frame);
+    accumulator += Math.min(now - last, 250);
+    last = now;
+    let ticks = 0;
+    while (accumulator >= MS_PER_TICK && ticks < MAX_TICKS_PER_FRAME) {
+      accumulator -= MS_PER_TICK;
+      ticks++;
+      if (client.paused) continue;
+      const inputFrame = input.frame();
+      // Holding the click button re-issues the order from wherever the cursor is now (spec 7.9b).
+      if ((inputFrame.held & ROLE_BITS.click) !== 0 && inputFrame.order === null && hover) input.setOrder({ kind: 'ground', x: hover.x, y: hover.y });
+      runtime.tick(inputFrame);
+    }
+    // A stall longer than five ticks is dropped, not replayed.
+    if (accumulator >= MS_PER_TICK) accumulator = 0;
+    if (client.follow) {
+      const p = view.entities.playerIndex();
+      if (p >= 0) followCamera(renderer.camera, view.entities.x(p), view.entities.y(p), view.entities.z(p), CAMERA_DEADZONE);
+    }
+    renderer.render(client.paused ? 1 : accumulator / MS_PER_TICK);
+    frames++;
+    options.onFrame?.(client);
+  };
+  raf = requestAnimationFrame(frame);
+  return client;
+}
