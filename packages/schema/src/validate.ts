@@ -334,6 +334,18 @@ export function checkProject(project: Project): ValidationIssue[] {
     list?.forEach((a, i) => checkAction(a, `${path}[${i}]`));
   };
 
+  /**
+   * A match inside an event pattern. `subject` and `other` are what the event
+   * defines for the trigger's conditions and actions, so a pattern cannot
+   * refer to them: such a pattern could never match.
+   */
+  const checkPatternMatch = (match: EntityMatch, path: string): void => {
+    if (match.by === 'subject' || match.by === 'other') {
+      bad(path, 'match-without-context', `An event pattern cannot match by "${match.by}": the event is what defines it.`);
+    }
+    checkMatch(match, path);
+  };
+
   const checkEvent = (when: EventPattern, path: string, site: Site): void => {
     switch (when.type) {
       case 'region-entered':
@@ -343,21 +355,21 @@ export function checkProject(project: Project): ValidationIssue[] {
         } else if (!site.mapRegions.has(when.regionId)) {
           bad(`${path}.regionId`, 'unresolved-ref', `This map has no region ${when.regionId}.`);
         }
-        checkMatch(when.who, `${path}.who`);
+        checkPatternMatch(when.who, `${path}.who`);
         break;
       case 'interacted':
-        checkMatch(when.target, `${path}.target`);
+        checkPatternMatch(when.target, `${path}.target`);
         break;
       case 'attack-hit':
-        checkMatch(when.attacker, `${path}.attacker`);
-        checkMatch(when.victim, `${path}.victim`);
+        checkPatternMatch(when.attacker, `${path}.attacker`);
+        checkPatternMatch(when.victim, `${path}.victim`);
         break;
       case 'health-crossed':
       case 'entity-died':
       case 'entity-spawned':
       case 'brain-state-entered':
       case 'jump-landed':
-        checkMatch(when.who, `${path}.who`);
+        checkPatternMatch(when.who, `${path}.who`);
         break;
       case 'variable-changed':
         ref(new Set(variables.keys()), when.variableId, `${path}.variableId`, 'variable');

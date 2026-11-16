@@ -16,3 +16,5 @@ export {
   u16ToBase64,
   u8ToBase64,
 } from './base64.ts';
+export * from './save.ts';
+export * from './prefs.ts';

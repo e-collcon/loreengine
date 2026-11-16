@@ -261,6 +261,31 @@ describe('[P1.validate.placement] where vocabulary may appear', () => {
   });
 });
 
+describe('[P2.validate.pattern-match] event patterns cannot match by subject or other', () => {
+  it('rejects them: the event is what defines subject and other', () => {
+    for (const by of ['subject', 'other'] as const) {
+      expect(
+        semantic((p) =>
+          void p.triggers.push({ id: fresh(), when: { type: 'entity-died', who: { by } }, given: [], then: [], once: false, enabled: true }),
+        ),
+      ).toEqual(['match-without-context @ triggers[3].when.who']);
+    }
+    // In conditions and actions they are the normal way to refer to the event's entities.
+    expect(
+      semantic((p) =>
+        void p.triggers.push({
+          id: fresh(),
+          when: { type: 'attack-hit', attacker: { by: 'player' }, victim: { by: 'any' } },
+          given: [{ type: 'alive', who: { by: 'other' } }],
+          then: [{ type: 'despawn', target: { by: 'subject' } }],
+          once: false,
+          enabled: true,
+        }),
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe('[P1.validate.variables] variables', () => {
   it('rejects duplicate keys and initial values of the wrong type', () => {
     expect(semantic((p) => void (p.variables[1]!.key = p.variables[0]!.key))).toEqual(['duplicate-id @ variables[1].key']);
