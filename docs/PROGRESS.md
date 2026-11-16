@@ -5,7 +5,7 @@ Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk aft
 | Chunk | Status | Tag | Elapsed | Notes |
 |---|---|---|---|---|
 | 1 Schema | **Green** | `chunk-1-green` (287d965) | 0h22 | Workspace, 10 packages, schema source, validators, reader manifest (310 fields), ported hex math / A\* / spatial hash with new suites, Emberfall |
-| 2 Runtime core | **Green** | `chunk-2-green` (SHA2) | 0h18 | Tick scheduler, events and cascade cap, evaluator, executor, variables, RNG, input frames, save boundary and exact resume, storage package |
+| 2 Runtime core | **Green** | `chunk-2-green` (b312aef) | 0h18 | Tick scheduler, events and cascade cap, evaluator, executor, variables, RNG, input frames, save boundary and exact resume, storage package |
 | 3 World (3A) | Not started | — | — | |
 | 4 Render spike (3B) | Not started | — | — | |
 | 5 Movement, sight, click orders (4A) | Not started | — | — | |
