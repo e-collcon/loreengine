@@ -31,7 +31,7 @@ import {
   STATUS_UNTARGETABLE,
 } from './entities.ts';
 import { HOSTILE } from './factions.ts';
-import { ROLE_INTERACT } from './input.ts';
+import { ROLE_CLICK, ROLE_INTERACT } from './input.ts';
 import type { Sim } from './sim.ts';
 
 export type ClickAction = 'attack' | 'use' | 'move-to' | 'none';
@@ -61,12 +61,7 @@ export function clickAction(sim: Sim, actor: number, target: number): ClickActio
   return 'move-to';
 }
 
-/** Optional hook: start the attack-primary swing for an attack order. Installed by the combat system. */
-export type OrderAttack = (actor: number, target: number, held: boolean) => boolean;
-
 export class Orders {
-  orderAttack: OrderAttack | null = null;
-  /** Optional hook: is this entity busy in a way that ignores input (airborne)? */
   constructor(private readonly sim: Sim) {}
 
   cancel(index: number): void {
@@ -121,6 +116,8 @@ export class Orders {
       }
 
       if ((input.pressed & ROLE_INTERACT) !== 0) this.interact(p);
+      // Dodge and the two attack buttons; a dodge or a swing cancels the order.
+      sim.combat.playerInput(p);
       if (e.orderKind[p] !== ORDER_NONE) this.carryOut(p);
     }
   }
@@ -196,10 +193,10 @@ export class Orders {
         this.cancel(p);
       } else if (kind === ORDER_APPROACH) {
         this.cancel(p);
-      } else if (this.orderAttack !== null) {
-        // Swing; the order repeats while the button is held, and ends otherwise.
-        const held = (sim.input.held & 1) !== 0;
-        if (this.orderAttack(p, t, held) && !held) this.cancel(p);
+      } else {
+        // Swing; the order repeats while the click button is held, and ends otherwise.
+        const held = (sim.input.held & ROLE_CLICK) !== 0;
+        if (sim.combat.orderAttack(p, t) && !held) this.cancel(p);
       }
       return;
     }

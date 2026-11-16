@@ -45,10 +45,12 @@ describe('[P4A.movement.speed] intent becomes velocity at movement.speed', () =>
     const sim = stageSim(20, 10, { col: 5, row: 5 });
     const e = sim.entities;
     let x = e.x[0]!;
-    e.speedScale[0] = 0.4; // an attack marked `slowed`
+    // The attack step owns speedScale (since chunk 6); stand in for an attack marked `slowed`.
+    let scale = 0.4;
+    sim.addSystem('attack-dodge', () => void (e.speedScale[0] = scale));
     runWith(sim, 10, { move: { x: 1, y: 0 } });
     expect(e.x[0]! - x).toBeCloseTo(10 * STEP * 0.4, 9);
-    e.speedScale[0] = 1;
+    scale = 1;
     x = e.x[0]!;
     e.restrict[0] = RESTRICT_MOVE;
     runWith(sim, 10, { move: { x: 1, y: 0 } });

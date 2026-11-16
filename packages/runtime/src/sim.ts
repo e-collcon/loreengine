@@ -19,13 +19,35 @@ import type {
   SerializedEntity,
 } from '@loreengine/schema';
 import { ActionExecutor } from './actions.ts';
+import { Animator } from './animator.ts';
 import { Brains, registerBrainActions } from './brains.ts';
+import { Combat } from './combat.ts';
 import { ConditionEvaluator } from './conditions.ts';
+import { Effects, registerEffectActions } from './effects.ts';
 import { Diagnostics } from './diagnostics.ts';
-import { F_COLLIDER, F_DEAD, F_DESPAWNING, F_HEALTH, F_MOVEMENT, F_PERSISTENT, F_SPAWNED, EntityStore, MAX_ENTITIES, NO_ENTITY, ORDER_NONE, WAYPOINT_STRIDE } from './entities.ts';
+import {
+  F_COLLIDER,
+  F_DEAD,
+  F_DESPAWNING,
+  F_HEALTH,
+  F_MOVEMENT,
+  F_PERSISTENT,
+  F_SPAWNED,
+  EntityStore,
+  MAX_ATTACK_SLOTS,
+  MAX_EFFECTS,
+  MAX_ENTITIES,
+  MAX_VICTIMS,
+  NO_ENTITY,
+  ORDER_NONE,
+  PHASE_NONE,
+  WAYPOINT_STRIDE,
+} from './entities.ts';
 import type { EntityId } from './entities.ts';
 import { EventBus } from './events.ts';
 import { FactionTable } from './factions.ts';
+import { Health, registerHealthActions } from './health.ts';
+import { Jumps, registerJumpActions } from './jumps.ts';
 import { InputState } from './input.ts';
 import { Matcher } from './match.ts';
 import type { MatchContext } from './match.ts';
@@ -120,6 +142,11 @@ export class Sim {
   readonly movement: Movement;
   readonly brains: Brains;
   readonly orders: Orders;
+  readonly effects: Effects;
+  readonly combat: Combat;
+  readonly health: Health;
+  readonly jumps: Jumps;
+  readonly animator: Animator;
   /** Entities by cell, rebuilt per map: collision, acquisition, and entity casts query it. */
   hash: SpatialHash | null = null;
   /** The largest collider radius spawned so far: how far a spatial query must reach. */
@@ -171,10 +198,27 @@ export class Sim {
     this.movement = new Movement(this);
     this.brains = new Brains(this);
     this.orders = new Orders(this);
+    this.effects = new Effects(this);
+    this.combat = new Combat(this);
+    this.health = new Health(this);
+    this.jumps = new Jumps(this);
+    this.animator = new Animator(this);
     // Phase 4 systems, in the slots of spec 5.4.
     this.addSystem('input', () => this.orders.step());
     this.addSystem('brains', () => this.brains.step());
-    this.addSystem('movement', () => this.movement.step());
+    this.addSystem('attack-dodge', () => this.combat.step());
+    this.addSystem('movement', () => {
+      this.jumps.step();
+      this.movement.step();
+    });
+    this.addSystem('contact', () => this.combat.contact());
+    this.addSystem('effects', () => this.effects.step());
+    this.addSystem('health', () => this.health.step());
+    this.addSystem('terrain-contact', () => this.health.terrainContact());
+    this.addSystem('animators', () => {
+      this.animator.step();
+      this.endHitstop();
+    });
   }
 
   /* ---------------------------------------------------------------------- */
@@ -258,6 +302,22 @@ export class Sim {
     return this.world === null ? 0 : this.world.surfaceHeight(x, y);
   }
 
+  /**
+   * Freeze an entity for `ticks` ticks after this one: its motion, attack
+   * and dodge timers, and animator stop; effects keep ticking (spec 7.4).
+   */
+  applyHitstop(index: number, ticks: number): void {
+    // One more than asked, because the count drops once at the end of this very tick.
+    if (this.entities.hitstop[index]! < ticks + 1) this.entities.hitstop[index] = ticks + 1;
+    this.entities.hitstopAt[index] = this.tick;
+  }
+
+  /** The last thing in tick step 10: hitstop counts down. */
+  private endHitstop(): void {
+    const e = this.entities;
+    for (let i = 0; i < e.highWater; i++) if (e.hitstop[i]! > 0) e.hitstop[i] = e.hitstop[i]! - 1;
+  }
+
   /** Where an entity's feet are at (x, y): on the surface, or two levels above it for a flyer (spec 6.3). */
   standingZ(index: number, x: number, y: number): number {
     const ground = this.surfaceZ(x, y);
@@ -323,7 +383,16 @@ export class Sim {
     if ((e.flags[index]! & F_HEALTH) !== 0) {
       const dead = (e.flags[index]! & F_DEAD) !== 0;
       // A map the player has left keeps health only where play changed it.
-      if (full || dead || e.hp[index] !== e.hpMax[index]) patch.health = { current: e.hp[index]!, dead };
+      if (full) {
+        patch.health = {
+          current: e.hp[index]!,
+          dead,
+          seen: e.hpSeen[index]!,
+          lastHitBy: e.lastHitBy[index]!,
+          despawnAt: e.despawnAt[index]!,
+          hurtUntil: e.hurtUntil[index]!,
+        };
+      } else if (e.hp[index] !== e.hpMax[index]) patch.health = { current: e.hp[index]!, dead };
     }
     if (full) this.captureMotion(index, patch);
     for (let i = 0; i < this.captureHooks.length; i++) this.captureHooks[i]!(index, patch, full);
@@ -367,8 +436,59 @@ export class Sim {
         homeY: e.homeY[index]!,
         patrolIndex: e.patrolIndex[index]!,
         wanderAt: e.wanderAt[index]!,
+        attackSeq: e.attackSeq[index]!,
+        attackPick: e.attackPick[index]!,
       };
     }
+    if (e.attackPhase[index] !== PHASE_NONE) {
+      const base = index * MAX_VICTIMS;
+      patch.attack = {
+        id: this.project.attacks[e.attack[index]!]!.id,
+        phase: e.attackPhase[index]!,
+        ticks: e.attackTicks[index]!,
+        started: e.attackStarted[index]!,
+        hits: Array.from(e.hitSet.subarray(base, base + e.hitCount[index]!)),
+      };
+    }
+    {
+      // Cooldowns still running; a trailing run of ready slots is not written.
+      const base = index * MAX_ATTACK_SLOTS;
+      let slots = MAX_ATTACK_SLOTS;
+      while (slots > 0 && e.attackReady[base + slots - 1]! <= this.tick) slots--;
+      if (slots > 0 || e.dodgeReady[index]! > this.tick) {
+        patch.cooldowns = { attacks: Array.from(e.attackReady.subarray(base, base + slots)), dodge: e.dodgeReady[index]! };
+      }
+    }
+    if (e.dodgeTicks[index]! > 0) patch.dodge = { ticks: e.dodgeTicks[index]!, x: e.dashX[index]!, y: e.dashY[index]! };
+    if (e.fxCount[index]! > 0) {
+      const base = index * MAX_EFFECTS;
+      patch.effects = [];
+      for (let k = 0; k < e.fxCount[index]!; k++) {
+        patch.effects.push({
+          status: this.effects.nameOf(e.fxStatus[base + k]!),
+          ticks: e.fxTicks[base + k]!,
+          stacks: e.fxStacks[base + k]!,
+          source: e.fxSource[base + k]!,
+          next: e.fxNext[base + k]!,
+        });
+      }
+    }
+    if (e.airborne[index] === 1) {
+      patch.jump = {
+        fromX: e.jumpFromX[index]!,
+        fromY: e.jumpFromY[index]!,
+        fromZ: e.jumpFromZ[index]!,
+        toX: e.jumpToX[index]!,
+        toY: e.jumpToY[index]!,
+        toZ: e.jumpToZ[index]!,
+        apex: e.jumpApex[index]!,
+        ticks: e.jumpTicks[index]!,
+        total: e.jumpTotal[index]!,
+        clip: e.jumpClip[index]!,
+      };
+    }
+    if (e.animClip[index] !== '') patch.anim = { clip: e.animClip[index]!, ticks: e.animTicks[index]!, frame: e.animFrame[index]! };
+    if (e.terrainTicks[index]! > 0) patch.terrain = { ticks: e.terrainTicks[index]! };
     if (e.target[index] !== NO_ENTITY) patch.target = { id: e.target[index]!, lastSeen: e.lastSeen[index]! };
     if (e.orderKind[index] !== ORDER_NONE) {
       patch.order = { kind: e.orderKind[index]!, target: e.orderTarget[index]!, x: e.orderX[index]!, y: e.orderY[index]! };
@@ -392,6 +512,8 @@ export class Sim {
       e.blockedTicks[index] = patch.path.blocked;
     }
     if (patch.brain && e.brain[index]! >= 0) {
+      e.attackSeq[index] = patch.brain.attackSeq;
+      e.attackPick[index] = patch.brain.attackPick;
       const state = this.brains.compiled[e.brain[index]!]!.stateIndex.get(patch.brain.state);
       if (state === undefined) {
         this.diagnostics.report('save-dropped-brain-state', `The save has a brain in state "${patch.brain.state}", which no longer exists; it restarts in its initial state.`);
@@ -423,7 +545,74 @@ export class Sim {
     if (patch.health && (e.flags[index]! & F_HEALTH) !== 0) {
       e.hp[index] = Math.min(patch.health.current, e.hpMax[index]!);
       if (patch.health.dead) e.flags[index] = e.flags[index]! | F_DEAD;
+      e.hpSeen[index] = patch.health.seen ?? e.hp[index]!;
+      e.lastHitBy[index] = patch.health.lastHitBy ?? NO_ENTITY;
+      e.despawnAt[index] = patch.health.despawnAt ?? 0;
+      e.hurtUntil[index] = patch.health.hurtUntil ?? 0;
     }
+    if (patch.attack) {
+      const attack = this.combat.indexOf(patch.attack.id);
+      if (attack < 0) {
+        this.diagnostics.report('save-dropped-attack', `The save has an attack ${patch.attack.id} in progress, which no longer exists.`);
+      } else {
+        e.attack[index] = attack;
+        e.attackPhase[index] = patch.attack.phase;
+        e.attackTicks[index] = patch.attack.ticks;
+        e.attackStarted[index] = patch.attack.started;
+        const hits = patch.attack.hits;
+        const count = Math.min(hits.length, MAX_VICTIMS);
+        for (let k = 0; k < count; k++) e.hitSet[index * MAX_VICTIMS + k] = hits[k]!;
+        e.hitCount[index] = count;
+      }
+    }
+    if (patch.cooldowns) {
+      const attacks = patch.cooldowns.attacks;
+      for (let k = 0; k < attacks.length && k < MAX_ATTACK_SLOTS; k++) e.attackReady[index * MAX_ATTACK_SLOTS + k] = attacks[k]!;
+      e.dodgeReady[index] = patch.cooldowns.dodge;
+    }
+    if (patch.dodge) {
+      e.dodgeTicks[index] = patch.dodge.ticks;
+      e.dashX[index] = patch.dodge.x;
+      e.dashY[index] = patch.dodge.y;
+    }
+    if (patch.effects) {
+      let n = 0;
+      for (const fx of patch.effects) {
+        const status = this.effects.statusOf(fx.status);
+        if (status === undefined) {
+          this.diagnostics.report('save-dropped-effect', `The save has an effect ${fx.status}, which no longer exists.`);
+          continue;
+        }
+        if (n >= MAX_EFFECTS) break;
+        const slot = index * MAX_EFFECTS + n++;
+        e.fxStatus[slot] = status;
+        e.fxTicks[slot] = fx.ticks;
+        e.fxStacks[slot] = fx.stacks;
+        e.fxSource[slot] = fx.source;
+        e.fxNext[slot] = fx.next;
+      }
+      e.fxCount[index] = n;
+      this.effects.refresh(index);
+    }
+    if (patch.jump) {
+      e.airborne[index] = 1;
+      e.jumpFromX[index] = patch.jump.fromX;
+      e.jumpFromY[index] = patch.jump.fromY;
+      e.jumpFromZ[index] = patch.jump.fromZ;
+      e.jumpToX[index] = patch.jump.toX;
+      e.jumpToY[index] = patch.jump.toY;
+      e.jumpToZ[index] = patch.jump.toZ;
+      e.jumpApex[index] = patch.jump.apex;
+      e.jumpTicks[index] = patch.jump.ticks;
+      e.jumpTotal[index] = patch.jump.total;
+      e.jumpClip[index] = patch.jump.clip;
+    }
+    if (patch.anim) {
+      e.animClip[index] = patch.anim.clip;
+      e.animTicks[index] = patch.anim.ticks;
+      e.animFrame[index] = patch.anim.frame;
+    }
+    if (patch.terrain) e.terrainTicks[index] = patch.terrain.ticks;
     if (patch.transform && this.hash !== null && this.world !== null) {
       // The entity was indexed where it spawned; it stands where the save says.
       const cell = this.world.cellAt(patch.transform.x, patch.transform.y);
@@ -563,8 +752,13 @@ export class Sim {
     delta.spawned = [];
     for (let i = 0; i < e.highWater; i++) {
       if (e.alive[i] !== 1 || (e.flags[i]! & (F_PERSISTENT | F_DESPAWNING)) !== 0) continue;
-      const lasting = this.capture(i, false);
       const key = e.placementKey[i]!;
+      if ((e.flags[i]! & F_DEAD) !== 0) {
+        // Dying when the map unloads: it is gone, as if its despawn timer had run out.
+        if (key !== '') delta.removed.add(key);
+        continue;
+      }
+      const lasting = this.capture(i, false);
       if (key !== '') {
         // Placed entities return to their placed positions on re-entry; only what lasts is kept.
         if (Object.keys(lasting).length > 0) delta.changed.set(key, lasting);
@@ -788,6 +982,9 @@ export function registerCoreActions(sim: Sim): void {
   x.register('play-sfx', (a) => sim.presentation.raise('sfx', -1, -1, a.assetId, 1));
   x.register('change-bgm', (a) => sim.presentation.raise('bgm', -1, -1, a.assetId ?? '', a.fadeMs));
   registerBrainActions(sim);
+  registerEffectActions(sim);
+  registerHealthActions(sim);
+  registerJumpActions(sim);
 }
 
 /** Phase 3A's entity actions: spawn, despawn, and teleport (within a map, or across maps). */

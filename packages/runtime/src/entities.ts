@@ -43,6 +43,20 @@ export const RESTRICT_ACT = 1 << 3;
 export const STATUS_INVULNERABLE = 1 << 0;
 export const STATUS_UNTARGETABLE = 1 << 1;
 
+/** Caps (spec 9.2). */
+export const MAX_VICTIMS = 16; //       victims per attack activation
+export const MAX_EFFECTS = 32; //       effects per entity
+export const MAX_ATTACK_SLOTS = 8; //   attacks with a cooldown per entity
+
+export const PHASE_NONE = 0;
+export const PHASE_WINDUP = 1;
+export const PHASE_ACTIVE = 2;
+export const PHASE_RECOVERY = 3;
+
+/** The two engine-owned effects: dodge i-frames, and being airborne in a scripted jump. */
+export const FX_IFRAMES = -1;
+export const FX_AIRBORNE = -2;
+
 /** Click orders (spec 7.9b). */
 export const ORDER_NONE = 0;
 export const ORDER_MOVE = 1; //     walk to a ground point
@@ -101,6 +115,8 @@ export class EntityStore {
   readonly vx = new Float64Array(MAX_ENTITIES);
   readonly vy = new Float64Array(MAX_ENTITIES);
   readonly hitstop = new Int32Array(MAX_ENTITIES);
+  /** The tick hitstop was last applied on: the animator still shows that tick's pose, then holds it. */
+  readonly hitstopAt = new Float64Array(MAX_ENTITIES).fill(-1);
   /** Bits of what active effects forbid (RESTRICT_*), and what they grant (STATUS_*). */
   readonly restrict = new Uint8Array(MAX_ENTITIES);
   readonly status = new Uint8Array(MAX_ENTITIES);
@@ -138,6 +154,68 @@ export class EntityStore {
   readonly patrolIndex = new Int32Array(MAX_ENTITIES);
   /** Tick at which a wandering brain picks its next point. */
   readonly wanderAt = new Float64Array(MAX_ENTITIES);
+
+  // AttackState: which attack (index into project.attacks, -1 none), its phase, ticks left, and who it has hit.
+  readonly attack = new Int32Array(MAX_ENTITIES).fill(-1);
+  /** PHASE_NONE, PHASE_WINDUP, PHASE_ACTIVE or PHASE_RECOVERY. */
+  readonly attackPhase = new Uint8Array(MAX_ENTITIES);
+  readonly attackTicks = new Int32Array(MAX_ENTITIES);
+  /** The tick the attack started on: its timers first advance on the next tick. */
+  readonly attackStarted = new Float64Array(MAX_ENTITIES);
+  /** Entity ids already hit by this activation (at most 16). */
+  readonly hitSet = new Float64Array(MAX_ENTITIES * MAX_VICTIMS);
+  readonly hitCount = new Uint8Array(MAX_ENTITIES);
+  /** Cooldowns: the tick each of the entity's attacks is ready again, by its slot in `attacker.attackIds`. */
+  readonly attackReady = new Float64Array(MAX_ENTITIES * MAX_ATTACK_SLOTS);
+  readonly dodgeReady = new Float64Array(MAX_ENTITIES);
+  /** Brain attack order: how many attacks it has started, and the attack it will try next (-1 not chosen). */
+  readonly attackSeq = new Int32Array(MAX_ENTITIES);
+  readonly attackPick = new Int32Array(MAX_ENTITIES).fill(-1);
+
+  // DodgeState: ticks left and the dash velocity.
+  readonly dodgeTicks = new Int32Array(MAX_ENTITIES);
+  readonly dashX = new Float64Array(MAX_ENTITIES);
+  readonly dashY = new Float64Array(MAX_ENTITIES);
+
+  // ActiveEffects: up to 32 per entity.
+  readonly fxCount = new Uint8Array(MAX_ENTITIES);
+  /** Index into project.statusEffects, or FX_IFRAMES / FX_AIRBORNE for the two engine-owned effects. */
+  readonly fxStatus = new Int16Array(MAX_ENTITIES * MAX_EFFECTS);
+  /** Ticks left, or -1 for a permanent effect. */
+  readonly fxTicks = new Int32Array(MAX_ENTITIES * MAX_EFFECTS);
+  readonly fxStacks = new Uint8Array(MAX_ENTITIES * MAX_EFFECTS);
+  readonly fxSource = new Float64Array(MAX_ENTITIES * MAX_EFFECTS);
+  /** Ticks until the next periodic run. */
+  readonly fxNext = new Int32Array(MAX_ENTITIES * MAX_EFFECTS);
+
+  // Health bookkeeping.
+  /** Health as the health step last saw it: `health-crossed` compares against it. */
+  readonly hpSeen = new Float64Array(MAX_ENTITIES);
+  /** Who hit this entity last, for kill credit. */
+  readonly lastHitBy = new Float64Array(MAX_ENTITIES).fill(-1);
+  /** Tick a dead entity despawns on. */
+  readonly despawnAt = new Float64Array(MAX_ENTITIES);
+  /** Tick until which the hurt clip plays. */
+  readonly hurtUntil = new Float64Array(MAX_ENTITIES);
+  /** Ticks until terrain contact fires again while standing on it. */
+  readonly terrainTicks = new Int32Array(MAX_ENTITIES);
+
+  // Scripted jump (spec 7.9c).
+  readonly jumpFromX = new Float64Array(MAX_ENTITIES);
+  readonly jumpFromY = new Float64Array(MAX_ENTITIES);
+  readonly jumpFromZ = new Float64Array(MAX_ENTITIES);
+  readonly jumpToX = new Float64Array(MAX_ENTITIES);
+  readonly jumpToY = new Float64Array(MAX_ENTITIES);
+  readonly jumpToZ = new Float64Array(MAX_ENTITIES);
+  readonly jumpApex = new Float64Array(MAX_ENTITIES);
+  readonly jumpTicks = new Int32Array(MAX_ENTITIES);
+  readonly jumpTotal = new Int32Array(MAX_ENTITIES);
+  readonly jumpClip: string[] = new Array<string>(MAX_ENTITIES).fill('');
+
+  // AnimatorState: the simulation owns animation time (spec 2).
+  readonly animClip: string[] = new Array<string>(MAX_ENTITIES).fill('');
+  readonly animTicks = new Int32Array(MAX_ENTITIES);
+  readonly animFrame = new Int32Array(MAX_ENTITIES);
 
   // The player's click order (spec 7.9b): ORDER_* kind, its target entity, and its ground point.
   readonly orderKind = new Uint8Array(MAX_ENTITIES);
@@ -243,6 +321,7 @@ export class EntityStore {
     this.lastCell[index] = -1;
     this.vx[index] = this.vy[index] = 0;
     this.hitstop[index] = 0;
+    this.hitstopAt[index] = -1;
     this.restrict[index] = 0;
     this.status[index] = 0;
     this.speedScale[index] = 1;
@@ -265,6 +344,29 @@ export class EntityStore {
     this.orderKind[index] = 0;
     this.orderTarget[index] = NO_ENTITY;
     this.orderX[index] = this.orderY[index] = 0;
+    this.attack[index] = -1;
+    this.attackPhase[index] = 0;
+    this.attackTicks[index] = 0;
+    this.attackStarted[index] = 0;
+    this.hitCount[index] = 0;
+    this.attackReady.fill(0, index * MAX_ATTACK_SLOTS, (index + 1) * MAX_ATTACK_SLOTS);
+    this.dodgeReady[index] = 0;
+    this.attackSeq[index] = 0;
+    this.attackPick[index] = -1;
+    this.dodgeTicks[index] = 0;
+    this.dashX[index] = this.dashY[index] = 0;
+    this.fxCount[index] = 0;
+    this.hpSeen[index] = max;
+    this.lastHitBy[index] = NO_ENTITY;
+    this.despawnAt[index] = 0;
+    this.hurtUntil[index] = 0;
+    this.terrainTicks[index] = 0;
+    this.jumpTicks[index] = 0;
+    this.jumpTotal[index] = 0;
+    this.jumpClip[index] = '';
+    this.animClip[index] = '';
+    this.animTicks[index] = 0;
+    this.animFrame[index] = 0;
     return this.generation[index]! * 65536 + index;
   }
 

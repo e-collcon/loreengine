@@ -30,7 +30,17 @@ export const ComponentPatchSchema = z
     /** The runtime entity id. Present for entities on the current map and persistent entities. */
     id: entityId.optional(),
     transform: z.strictObject({ x: finite, y: finite, z: finite, facing: finite }).optional(),
-    health: z.strictObject({ current: finite, dead: z.boolean() }).optional(),
+    health: z
+      .strictObject({
+        current: finite,
+        dead: z.boolean(),
+        /** Health as the health step last saw it, who hit last, and the death and hurt timers (current map only). */
+        seen: finite.optional(),
+        lastHitBy: z.int().optional(),
+        despawnAt: tick.optional(),
+        hurtUntil: tick.optional(),
+      })
+      .optional(),
     /** Knockback velocity, hitstop, the cell region events last saw, and the previous position. */
     motion: z
       .strictObject({
@@ -57,7 +67,31 @@ export const ComponentPatchSchema = z
         waypoints: z.array(finite),
       })
       .optional(),
-    brain: z.strictObject({ state: z.string(), entered: tick, homeX: finite, homeY: finite, patrolIndex: tick, wanderAt: tick }).optional(),
+    brain: z
+      .strictObject({
+        state: z.string(),
+        entered: tick,
+        homeX: finite,
+        homeY: finite,
+        patrolIndex: tick,
+        wanderAt: tick,
+        attackSeq: tick,
+        attackPick: z.int(),
+      })
+      .optional(),
+    /** An attack in progress: which, its phase (1 windup, 2 active, 3 recovery), ticks left, and who it has hit. */
+    attack: z.strictObject({ id: z.string(), phase: z.int().min(1).max(3), ticks: z.int(), started: tick, hits: z.array(z.int()) }).optional(),
+    /** The tick each attack slot and the dodge are ready again. */
+    cooldowns: z.strictObject({ attacks: z.array(tick), dodge: tick }).optional(),
+    dodge: z.strictObject({ ticks: tick, x: finite, y: finite }).optional(),
+    /** Active effects, in order. `status` is a status effect id, or '@iframes' / '@airborne' for the engine's own. */
+    effects: z.array(z.strictObject({ status: z.string(), ticks: z.int(), stacks: z.int().min(1), source: z.int(), next: z.int() })).optional(),
+    jump: z
+      .strictObject({ fromX: finite, fromY: finite, fromZ: finite, toX: finite, toY: finite, toZ: finite, apex: finite, ticks: tick, total: tick, clip: z.string() })
+      .optional(),
+    anim: z.strictObject({ clip: z.string(), ticks: tick, frame: z.int() }).optional(),
+    /** Ticks until terrain contact fires again. */
+    terrain: z.strictObject({ ticks: tick }).optional(),
     target: z.strictObject({ id: z.int(), lastSeen: tick }).optional(),
     /** The player's click order. */
     order: z.strictObject({ kind: z.int().min(0).max(4), target: z.int(), x: finite, y: finite }).optional(),

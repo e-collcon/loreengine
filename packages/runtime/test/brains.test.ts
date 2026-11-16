@@ -389,10 +389,13 @@ describe('click orders (spec 7.9b)', () => {
     expect(visited.has(E.rampLow.row * E.width + E.rampLow.col)).toBe(true);
     expect(visited.has(E.rampHigh.row * E.width + E.rampHigh.col)).toBe(true);
     expect(e.z[0]).toBe(1);
-    // In range of attack-primary (slash: reach 1.6, plus the target's radius), and facing the target.
+    // It closed to attack-primary's range (slash: reach 1.6, plus the target's radius), faced the target,
+    // and (since chunk 6) swung once: the sentry lost health and was knocked back a little.
     const d = Math.hypot(e.x[sentry]! - e.x[0]!, e.y[sentry]! - e.y[0]!);
-    expect(d).toBeLessThanOrEqual(1.6 + 0.4 + 1e-6);
-    expect(e.facing[0]).toBeCloseTo(Math.atan2(e.y[sentry]! - e.y[0]!, e.x[sentry]! - e.x[0]!), 3);
+    expect(d).toBeLessThanOrEqual(1.6 + 0.4 + 0.5);
+    expect(e.facing[0]).toBeCloseTo(Math.atan2(e.y[sentry]! - e.y[0]!, e.x[sentry]! - e.x[0]!), 1);
+    expect(e.hp[sentry]).toBe(30);
+    expect(e.orderKind[0]).toBe(ORDER_NONE); // the button was not held: one swing, and the order is done
   });
 
   it('[P4A.orders.interact] a click on an interactable is a use order: path into its radius, then raise interacted', () => {
@@ -547,6 +550,6 @@ describe('click orders (spec 7.9b)', () => {
     expect([e.goalX[0], e.goalY[0]]).not.toEqual(goal0);
     expect([e.goalX[0], e.goalY[0]]).toEqual([e.x[enemy], e.y[enemy]]);
     run(sim, 700); // some 40 world units at 4.5 per second
-    expect(Math.hypot(e.x[enemy]! - e.x[0]!, e.y[enemy]! - e.y[0]!)).toBeLessThanOrEqual(2.0 + 1e-6);
+    expect(Math.hypot(e.x[enemy]! - e.x[0]!, e.y[enemy]! - e.y[0]!)).toBeLessThanOrEqual(2.0 + 0.5); // in range, plus the swing's knockback
   });
 });

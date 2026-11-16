@@ -32,8 +32,10 @@ function arena(count: number, withBrains: boolean): Sim {
     m.fill({ col: 30, row: 46, w: 3, h: 3 }, T.rock, 0);
     m.frame({ col: 0, row: 0, w: 64, h: 64 }, T.rock, 0);
 
-    const body = { collider: { radius: 0.35, height: 1.6, solid: true }, movement: { speed: 4, turnRate: 12, modes: ['walk' as const], startMode: 'walk' as const }, motion: { mass: 1, friction: 12 }, health: { max: 50 } };
-    s.archetype('Body', { ...body, sight: { range: 40, eyeHeight: 1.4 } });
+    // Health high enough that nobody dies during a bench: the population stays at `count`.
+    const body = { collider: { radius: 0.35, height: 1.6, solid: true }, movement: { speed: 4, turnRate: 12, modes: ['walk' as const], startMode: 'walk' as const }, motion: { mass: 1, friction: 12 }, health: { max: 1e9 } };
+    const stab = id('attack', 'stab') as Id<'attack'>;
+    s.archetype('Body', { ...body, sight: { range: 40, eyeHeight: 1.4 }, attacker: { attackIds: [stab] } });
     if (withBrains) {
       const wander = id('brain', 'bench-wander') as Id<'brain'>;
       const hunt = id('brain', 'bench-hunt') as Id<'brain'>;
@@ -45,14 +47,35 @@ function arena(count: number, withBrains: boolean): Sim {
           initial: 'look',
           states: [
             { id: 'look', behavior: { kind: 'wander', radius: 4 }, onEnter: undefined, transitions: [{ to: 'chase', when: [{ type: 'has-target' }], afterMs: undefined }] },
-            { id: 'chase', behavior: { kind: 'chase' }, onEnter: undefined, transitions: [{ to: 'look', when: [{ type: 'not', of: { type: 'has-target' } }], afterMs: 500 }] },
+            {
+              id: 'chase',
+              behavior: { kind: 'chase' },
+              onEnter: undefined,
+              transitions: [
+                { to: 'look', when: [{ type: 'not', of: { type: 'has-target' } }], afterMs: 500 },
+                { to: 'fight', when: [{ type: 'target-within', distance: 1.3 }], afterMs: undefined },
+              ],
+            },
+            {
+              id: 'fight',
+              behavior: { kind: 'attack', attackIds: [stab], pick: 'sequence' },
+              onEnter: undefined,
+              transitions: [{ to: 'chase', when: [{ type: 'not', of: { type: 'target-within', distance: 1.8 } }], afterMs: 300 }],
+            },
           ],
         },
       ];
       s.project.brains.push(...brains);
       const [player, hostile] = s.project.factions.map((f) => f.id);
       s.archetype('Wanderer', { ...body, faction: { factionId: player! }, brain: { brainId: wander } });
-      s.archetype('Hunter', { ...body, faction: { factionId: hostile! }, sight: { range: 10, eyeHeight: 1.4 }, acquisition: { range: 10, forgetMs: 3000 }, brain: { brainId: hunt } });
+      s.archetype('Hunter', {
+        ...body,
+        faction: { factionId: hostile! },
+        sight: { range: 10, eyeHeight: 1.4 },
+        acquisition: { range: 10, forgetMs: 3000 },
+        attacker: { attackIds: [stab] },
+        brain: { brainId: hunt },
+      });
     }
     // A deterministic scatter over open ground.
     let seed = 99;
@@ -75,7 +98,7 @@ function arena(count: number, withBrains: boolean): Sim {
 }
 
 describe('[P4A.budget.zero-alloc] zero allocation in the hot paths', () => {
-  it('movement, collision, separation and castSegment allocate nothing over 10,000 ticks', () => {
+  it('movement, collision, separation, castSegment and attack contact allocate nothing over 10,000 ticks', () => {
     if (!gc) throw new Error('the allocation gate needs --expose-gc (see vitest.config.ts)');
     const sim = arena(300, false);
     const e = sim.entities;
@@ -85,6 +108,8 @@ describe('[P4A.budget.zero-alloc] zero allocation in the hot paths', () => {
     for (let i = 0; i < headings.length; i++) headings[i] = (i * 2.399963) % (Math.PI * 2);
     let casts = 0;
     let hits = 0;
+    const stab = sim.combat.indexOf(id('attack', 'stab'));
+    const hpBefore = e.hp[1]! * 300;
     const tick = (t: number): void => {
       const end = e.highWater;
       for (let i = 1; i < end; i++) {
@@ -97,6 +122,8 @@ describe('[P4A.budget.zero-alloc] zero allocation in the hot paths', () => {
           e.vx[i] = Math.cos(h + 1) * 9;
           e.vy[i] = Math.sin(h + 1) * 9;
         }
+        // And a swing every few seconds each: contact, onHit, knockback and hitstop.
+        if (((t + i * 29) & 127) === 0) sim.combat.start(i, stab, e.x[i]! + Math.cos(h), e.y[i]! + Math.sin(h));
       }
       sim.input.set(frame);
       sim.step();
@@ -126,6 +153,11 @@ describe('[P4A.budget.zero-alloc] zero allocation in the hot paths', () => {
     expect(hits).toBeLessThan(1_320_000);
     expect(growth).toBeLessThan(64 * 1024);
 
+    // Blows landed: the bodies have no faction, so everyone is fair game.
+    let hpAfter = 0;
+    for (let i = 1; i < e.highWater; i++) hpAfter += e.hp[i]!;
+    expect(hpBefore - hpAfter).toBeGreaterThan(8 * 500);
+    console.log(`[bench] zero-alloc: ${(hpBefore - hpAfter) / 8} stab hits landed`);
     // The scene really moved: bodies travelled and collided.
     let moved = 0;
     for (let i = 1; i < e.highWater; i++) if (Math.hypot(e.x[i]! - e.homeX[i]!, e.y[i]! - e.homeY[i]!) > 1) moved++;
@@ -157,7 +189,7 @@ describe('[P4A.budget.zero-alloc] zero allocation in the hot paths', () => {
 });
 
 describe('[P4A.budget.tick-time] simulation tick on the large bench', () => {
-  it('300 entities, 60 of them hunting: measures the tick (target 4 ms)', () => {
+  it('300 entities, 60 of them in combat: measures the tick (target 4 ms)', () => {
     const sim = arena(300, true);
     const frame = emptyInput();
     for (let t = 0; t < 600; t++) {
@@ -180,17 +212,24 @@ describe('[P4A.budget.tick-time] simulation tick on the large bench', () => {
     const e = sim.entities;
     let hunting = 0;
     let walking = 0;
+    let fighting = 0;
+    let swings = 0;
     for (let i = 0; i < e.highWater; i++) {
       if (e.alive[i] !== 1) continue;
       if (e.target[i] !== -1) hunting++;
       if (e.pathCount[i]! > 0) walking++;
+      if (sim.brains.stateOf(i) === 'fight') fighting++;
     }
+    sim.presentation.since(0, (p) => {
+      if (p.kind === 'attack-hit') swings++;
+    });
     console.log(
       `[bench] tick: mean ${mean.toFixed(3)} ms, p50 ${p50.toFixed(3)} ms, p99 ${p99.toFixed(3)} ms, max ${max.toFixed(3)} ms ` +
-        `(target 4 ms); ${e.count} entities, ${hunting} with a target, ${walking} walking a path`,
+        `(target 4 ms); ${e.count} entities, ${hunting} with a target, ${fighting} in the fight state, ${walking} walking a path`,
     );
     expect(e.count).toBe(301);
     expect(hunting).toBeGreaterThan(10);
+    expect(swings).toBeGreaterThan(0);
     // A sanity bound only: the 4 ms budget is reported, not enforced (kickoff §6).
     expect(mean).toBeLessThan(50);
   });

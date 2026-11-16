@@ -6,7 +6,7 @@
  */
 import { checkProject } from '@loreengine/schema';
 import type { Project, SaveKind, SaveState } from '@loreengine/schema';
-import { F_DEAD, WAYPOINT_STRIDE } from './entities.ts';
+import { F_DEAD, STATUS_INVULNERABLE, WAYPOINT_STRIDE } from './entities.ts';
 import { clickAction } from './orders.ts';
 import { hashText } from './hash.ts';
 import { quantizeInput } from './input.ts';
@@ -127,6 +127,14 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
       placementKey: (i) => e.placementKey[i]!,
       brainState: (i) => sim.brains.stateOf(i),
       target: (i) => e.target[i]!,
+      clip: (i) => e.animClip[i]!,
+      frame: (i) => e.animFrame[i]!,
+      attackPhase: (i) => e.attackPhase[i]!,
+      attack: (i) => e.attack[i]!,
+      dodging: (i) => e.dodgeTicks[i]! > 0,
+      airborne: (i) => e.airborne[i] === 1,
+      hitstop: (i) => e.hitstop[i]!,
+      invulnerable: (i) => (e.status[i]! & STATUS_INVULNERABLE) !== 0,
       path: (i, out) => {
         const left = e.pathCount[i]! - e.pathIndex[i]!;
         const n = Math.max(0, Math.min(left, out.length >> 1));

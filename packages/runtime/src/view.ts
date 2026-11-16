@@ -53,6 +53,17 @@ export interface EntityView {
   brainState(index: number): string;
   /** The entity's acquired target, or NO_ENTITY. */
   target(index: number): EntityId;
+  /** The clip the animator says is playing, and the frame within it (the renderer only draws them). */
+  clip(index: number): string;
+  frame(index: number): number;
+  /** 0 none, 1 windup, 2 active, 3 recovery; and the index into `project.attacks` (-1 none). */
+  attackPhase(index: number): number;
+  attack(index: number): number;
+  /** Is the entity dodging, airborne in a scripted jump, in hitstop, or invulnerable right now? */
+  dodging(index: number): boolean;
+  airborne(index: number): boolean;
+  hitstop(index: number): number;
+  invulnerable(index: number): boolean;
   /** Waypoints left on the entity's path, as (x, y) pairs written into `out`; returns how many. */
   path(index: number, out: Float64Array): number;
 }

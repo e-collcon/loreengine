@@ -142,11 +142,11 @@ describe('[P2.save.header] the save boundary', () => {
     expect(save.persistent).toHaveLength(1);
     expect(save.persistent[0]!.archetypeId).toBe(project.settings.playerArchetypeId);
     expect(save.persistent[0]!.state.id).toBe(0);
-    expect(save.persistent[0]!.state.health).toEqual({ current: 100, dead: false });
+    expect(save.persistent[0]!.state.health).toMatchObject({ current: 100, dead: false });
     const map = save.maps[project.startMapId]!;
     expect(Object.keys(map.changed).sort()).toEqual([KEYS.elder, KEYS.sentry, KEYS.warden].sort());
     expect(map.changed[KEYS.warden]!.transform).toBeDefined();
-    expect(map.changed[KEYS.warden]!.health).toEqual({ current: 300, dead: false });
+    expect(map.changed[KEYS.warden]!.health).toMatchObject({ current: 300, dead: false });
     expect(map.changed[KEYS.elder]!.health).toBeUndefined(); // the elder has no health
     expect(map.removed).toEqual([]);
     expect(map.spawned).toEqual([]);

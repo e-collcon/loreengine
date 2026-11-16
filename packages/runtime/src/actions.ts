@@ -13,7 +13,8 @@ import type { Diagnostics } from './diagnostics.ts';
 import type { MatchContext } from './match.ts';
 
 export type ActionType = Action['type'];
-export type ActionOf<T extends ActionType> = Extract<Action, { type: T }>;
+/** The action variant handling type `T` (one variant may cover two types, such as apply-effect and remove-effect). */
+export type ActionOf<T extends ActionType> = Action extends infer A ? (A extends { type: infer U } ? (T extends U ? A : never) : never) : never;
 export type ActionHandler<T extends ActionType> = (action: ActionOf<T>, ctx: MatchContext) => void;
 
 export class ActionExecutor {

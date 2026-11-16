@@ -193,3 +193,37 @@ Items that need E's ruling. Nothing here blocks the build order; each was resolv
 - **D116 — Two more edits to earlier chunks' tests.** `lifecycle.test.ts` took a reference position after spawning dummies on top of the player; separation now pushes the player off them, so the reference is taken before. `runtime.test.ts`'s view key list gained `clickAction`, `castSegment`, `canSee` (D76). *(§9.6)*
 - **D117 — The benches run inside Vitest, not on a "production build".** The runtime has no build step (D2), so there is no separate production artifact to bench in Node; the same TypeScript is what ships to Vite. *(§9.1)*
 - **D118 — `worldToCellIndex` returns `+0`, never `-0`.** Rounding a small negative coordinate produced `-0` for cell 0. *(§6.3)*
+
+## Chunk 6 — Combat (4B)
+
+### Attacks
+
+- **D119 — An attack's timers first advance on the tick after it starts.** That makes the first active tick exactly `windupTicks` after the `attack-windup` event, which is what the telegraph-timing test requires. A windup of 0 ms is active on the tick it starts. *(§7.8, §7.14)*
+- **D120 — The cooldown starts when recovery ends** (or when the attack is cut short by a dodge, a death, or a scripted jump). Cooldowns are kept per slot of the entity's `attacker.attackIds`, eight slots at most. Swinging an attack the entity does not own (a brain naming one outside `attackIds`) works but has no cooldown, with a one-time diagnostic. *(§7.3, §7.8)*
+- **D121 — Hitboxes test against the victim's collider circle,** not its center: an arc's range and half-angle, a circle's radius, and a line's length and half-width are each widened by the victim's radius. *(§7.8)*
+- **D122 — Only allies are spared when `friendlyFire` is off.** Neutrals and entities with no faction can be hit, as §7.8's wording has it ("it is not an ally, unless `friendlyFire` is on"). *(§7.8)*
+- **D123 — Knockback needs a `motion` component** (that is what "knockback response" means in §4.5) and goes along the attacker's facing, divided by mass. *(§4.5, §7.4, §7.8)*
+- **D124 — Victims are tested in ascending entity index,** so which 16 are hit when more are in reach does not depend on spatial-hash order. *(§7.8, L5)*
+- **D125 — The no-hits-through-walls ray runs chest to chest,** at 60% of each collider's height, in projectile mode. A victim standing right at a ledge's rim can therefore be hit from below when `verticalReach` allows it. *(§7.8)*
+- **D126 — Hitstop of N ticks freezes the N ticks after the hit.** The counter is set to N + 1 and drops at the end of every tick, the hit's own included. On the tick of the hit the animator still steps once, so the pose that holds is the impact pose (the active clip), not the windup's last frame. *(§7.4, §7.12)*
+
+### Dodge and effects
+
+- **D127 — Dodge details.** The cooldown runs from the start of the dodge. The dash lasts exactly its ticks (the timer counts after each tick of dash, so 3 units over 250 ms is 3 units). A dodge out of recovery ends the attack. The i-frame effect covers contact from the very tick the dodge starts. *(§7.9)*
+- **D128 — The two engine-owned effects are named `@iframes` and `@airborne` in saves.** `@airborne` carries the invulnerable flag and all four restrictions. *(§7.9, §7.9c)*
+- **D129 — `stack` renews the duration as well as adding a stack, and a periodic payload runs once per stack.** Three stacks of a poison hurt three times as much. §7.10 says effects "follow their stacking mode" without saying what a stack does. *(§7.10)*
+- **D130 — `per-source` keeps one instance per applying entity; `global` shares one.** The source of an `apply-effect` is the action's `subject`. The 32 cap refuses any new instance, not only an `independent` one. *(§4.5, §9.2)*
+- **D131 — `modify-health` ignores the invulnerable flag.** §7.10's reader table gives that flag one reader, attack contact. Lava still burns a dodging player; a blow does not land. *(§7.10)*
+
+### Health, terrain, jumps, animator
+
+- **D132 — `health-crossed` compares health with what the health step last saw,** so one event fires per listened threshold crossed between steps, however many blows it took. It fires on falling only. *(§7.10)*
+- **D133 — An entity with no `onDeath` component despawns at once when it dies.** One that is dying when its map unloads is recorded as removed. *(§7.10)*
+- **D134 — Terrain contact fires at once on stepping on, then every `everyMs`;** stepping off resets it. Only entities in walk mode count as standing on terrain. *(§7.10)*
+- **D135 — `apply-impulse`.** `away: 'other'` pushes the target directly away from the other entity (or, when the target is the other, away from the subject). `away: 'facing'` pushes along the facing of the subject, or the target's own when there is no subject. *(§4.5)*
+- **D136 — A scripted jump's arc is a parabola whose midpoint is `apex` above the higher end.** In flight the entity raises no region events (it is over cells, not on them); the landing does. A jump is refused for a dead entity or one already airborne. *(§7.9c)*
+- **D137 — Animator.** A scripted jump's `clip` ranks just below death. An attack clip the entity's animation set does not have falls back to idle. A cue fires when the frame changes onto it, including frame 0 on entering the clip. *(§7.12)*
+- **D138 — Who raises feedback.** The runtime raises a `feedback` presentation event for an attack's `feedback.hit`, the victim's `onHurt`, a death's `onDeath`, and `play-feedback`. The windup feedback is not raised as its own event: the renderer reads it from the attack named by `attack-windup`, because its ground indicator needs the attack's hitbox. The reader manifest entry for `AttackDef.feedback.windup` moved to `render/feedback` accordingly. *(§6.9)*
+- **D139 — The `attack` behavior picks once per swing** (the next in sequence, or one seeded draw) and waits for that attack's cooldown and range. Range is `aiRange` (or the hitbox's reach) plus the target's radius. *(§7.11)*
+- **D140 — An attack order swings once and ends, unless the click role is held.** Pressing an attack button or dodging cancels the order. *(§7.9b)*
+- **D141 — Four more edits to earlier chunks' tests,** all because combat is now live: two chunk 5 order tests assumed the hero would stand in range without swinging (the swing's knockback moves the target); one chunk 5 movement test poked `speedScale`, which the attack step now owns; one chunk 2 save test compared the health block exactly, and it gained fields. *(§9.6)*

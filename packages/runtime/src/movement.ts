@@ -51,6 +51,12 @@ export class Movement {
 
     for (let i = 0; i < end; i++) {
       if (e.alive[i] !== 1) continue;
+      if (e.airborne[i] === 1) {
+        // A scripted jump carries it: no intent, no collision (jumps.ts moved it already).
+        e.intentX[i] = 0;
+        e.intentY[i] = 0;
+        continue;
+      }
       const moved = Math.hypot(e.x[i]! - e.prevX[i]!, e.y[i]! - e.prevY[i]!);
       e.prevX[i] = e.x[i]!;
       e.prevY[i] = e.y[i]!;
@@ -94,8 +100,10 @@ export class Movement {
         ix /= length;
         iy /= length;
       }
-      const vx = ix * speed + e.vx[i]!;
-      const vy = iy * speed + e.vy[i]!;
+      // A dodge replaces walking with its dash; knockback still adds to either.
+      const dashing = e.dodgeTicks[i]! > 0;
+      const vx = (dashing ? e.dashX[i]! : ix * speed) + e.vx[i]!;
+      const vy = (dashing ? e.dashY[i]! : iy * speed) + e.vy[i]!;
       if (vx === 0 && vy === 0) continue;
 
       const radius = data.collider ? data.collider.radius : DEFAULT_RADIUS;
@@ -118,6 +126,11 @@ export class Movement {
         e.x[i] = px + dx;
         e.y[i] = py + dy;
         this.collide(world, i, radius, mask, px, py);
+      }
+      // A dodge lasts exactly its ticks of dash: the timer counts down after each one.
+      if (dashing && --e.dodgeTicks[i]! === 0) {
+        e.dashX[i] = 0;
+        e.dashY[i] = 0;
       }
 
       // Friction decays knockback every tick.
@@ -257,7 +270,7 @@ export class Movement {
     const pitchY = 1.5 * world.hexSize;
     let any = false;
     for (let i = 0; i < end; i++) {
-      if (e.alive[i] !== 1 || (e.flags[i]! & (F_SOLID | F_DEAD)) !== F_SOLID) continue;
+      if (e.alive[i] !== 1 || (e.flags[i]! & (F_SOLID | F_DEAD)) !== F_SOLID || e.airborne[i] === 1) continue;
       const cell = hash.cellOfItem(i);
       if (cell < 0) continue;
       const di = e.data[i]!;
@@ -281,7 +294,7 @@ export class Movement {
       const fixedI = (e.flags[i]! & F_MOVEMENT) === 0 && di.motion === undefined;
       for (let k = 0; k < n; k++) {
         const j = buffer[k]!;
-        if (j <= i || (e.flags[j]! & (F_SOLID | F_DEAD)) !== F_SOLID) continue;
+        if (j <= i || (e.flags[j]! & (F_SOLID | F_DEAD)) !== F_SOLID || e.airborne[j] === 1) continue;
         const dj = e.data[j]!;
         const rj = dj.collider!.radius;
         let nx = e.x[j]! - e.x[i]!;
@@ -348,6 +361,7 @@ export class Movement {
       }
       if (cell < 0) hash.remove(i);
       else hash.update(i, cell);
+      if (e.airborne[i] === 1) continue; // in flight it is over cells, not on them: regions wait for the landing
       const last = e.lastCell[i]!;
       if (cell === last) continue;
       e.lastCell[i] = cell;

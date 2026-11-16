@@ -44,9 +44,6 @@ export interface CompiledBrain {
   initial: number;
 }
 
-/** Optional hook: how the `attack` behavior swings. Installed by the combat system (chunk 6). */
-export type AttackBehavior = (index: number, target: number, state: BrainDef['states'][number]) => void;
-
 export class Brains {
   readonly compiled: CompiledBrain[];
   private readonly indexById = new Map<string, number>();
@@ -54,7 +51,6 @@ export class Brains {
   private readonly brainCtx: BrainContext = { hasTarget: false, targetDistance: Infinity, homeDistance: 0 };
   private readonly ctx: ConditionContext = { subject: NO_ENTITY, other: NO_ENTITY, brain: this.brainCtx };
   private readonly actionCtx: MatchContext = { subject: NO_ENTITY, other: NO_ENTITY };
-  attackBehavior: AttackBehavior | null = null;
 
   constructor(private readonly sim: Sim) {
     this.compiled = sim.project.brains.map((def) => {
@@ -112,6 +108,8 @@ export class Brains {
     e.brainEntered[index] = sim.tick;
     e.wanderAt[index] = sim.tick;
     e.patrolIndex[index] = 0;
+    e.attackSeq[index] = 0;
+    e.attackPick[index] = -1;
     sim.paths.clear(index); // whatever the old state was walking toward no longer applies
     const id = e.idAt(index);
     if (state.def.onEnter) {
@@ -276,7 +274,7 @@ export class Brains {
         e.aiming[i] = 1;
         e.aimX[i] = e.x[target]!;
         e.aimY[i] = e.y[target]!;
-        if (this.attackBehavior !== null) this.attackBehavior(i, target, state);
+        this.sim.combat.brainAttack(i, target, state);
         break;
       }
     }

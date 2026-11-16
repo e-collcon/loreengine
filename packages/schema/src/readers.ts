@@ -108,7 +108,8 @@ const rows: readonly Row[] = [
   ['runtime/combat', 'P4B.attack.hitstop', 'AttackDef.hitstopMs'],
   ['runtime/combat', 'P4B.attack.move-during', 'AttackDef.moveDuring'],
   ['runtime/animator', 'P4B.animator.attack-clips', 'AttackDef.clips.windup AttackDef.clips.active AttackDef.clips.recovery'],
-  ['runtime/combat', 'P4B.attack.feedback-events', 'AttackDef.feedback.windup AttackDef.feedback.hit'],
+  ['runtime/combat', 'P4B.attack.feedback-events', 'AttackDef.feedback.hit'],
+  ['render/feedback', 'P3C.feedback.ground-indicator', 'AttackDef.feedback.windup'],
   ['runtime/brains', 'P4B.brain.attack', `AttackDef.aiRange BrainDef.states[].behavior<attack>.kind
      BrainDef.states[].behavior<attack>.attackIds[] BrainDef.states[].behavior<attack>.pick`],
 
