@@ -1,0 +1,585 @@
+/**
+ * Emberfall — the fixture every phase tests against (spec 8.9). Authored in
+ * code so it stays valid as the schema evolves; `emberfall.project.json` is
+ * the same project as a file, kept in step by `tests/fixtures.test.ts`.
+ *
+ *   Village (level 0)   an elder to talk to, and a lava strip that hurts.
+ *   Plateau (level 2)   reached by two stacked ramps; a sentry watches from
+ *                       the cliff edge, then comes down the ramps to chase.
+ *   Boss arena          a mini-boss with a telegraphed slam and a sweep; at
+ *                       50% health a trigger enrages it; its death is victory.
+ *   Side area           one deliberately broken ramp, for the lint test.
+ *
+ * Art is placeholder: the atlas pages are empty until the Phase 3 bake.
+ * Emberfall carries no attributes, because the foundation has none.
+ */
+import { defaultSettings, projectEnvelope, seedFactions, seedInputActions, seededIdFactory, terrainDefaults } from '@loreengine/schema';
+import type {
+  AnimationSetDef,
+  ArchetypeDef,
+  AttackDef,
+  BrainDef,
+  ClipDef,
+  EntityPlacement,
+  FeedbackDef,
+  Id,
+  MapDef,
+  Project,
+  StatusEffectDef,
+  TerrainDef,
+  TriggerDef,
+  VariableDef,
+} from '@loreengine/schema';
+import { MapPainter, cellCenter, id, placeholderAtlas, regionCells } from './build.ts';
+import type { Rect } from './build.ts';
+
+/** Named cells of the Emberfall map, in offset coordinates. Tests use these. */
+export const EMBERFALL = {
+  width: 48,
+  height: 32,
+  playerStart: { col: 8, row: 22 },
+  elder: { col: 6, row: 24 },
+  lava: { col: 10, row: 27, w: 4, h: 1 } satisfies Rect,
+  pond: { col: 3, row: 19, w: 3, h: 2 } satisfies Rect,
+  village: { col: 2, row: 18, w: 13, h: 12 } satisfies Rect,
+  plateau: { col: 20, row: 4, w: 11, h: 9 } satisfies Rect,
+  /** Two stacked ramps rising east (dir 1) onto the plateau: level 0 -> 1 -> 2. */
+  rampLow: { col: 18, row: 10 },
+  rampHigh: { col: 19, row: 10 },
+  sentry: { col: 22, row: 11 },
+  arena: { col: 34, row: 16, w: 12, h: 13 } satisfies Rect,
+  arenaGate: { col: 34, row: 22 },
+  boss: { col: 41, row: 22 },
+  /** A ramp rising east into level-0 ground: its high edge leads nowhere. */
+  brokenRamp: { col: 6, row: 6 },
+} as const;
+
+const T = { grass: 0, dirt: 1, stone: 2, lava: 3, water: 4, rock: 5 } as const;
+
+export function buildEmberfall(): Project {
+  const newId = seededIdFactory(0xe3be7fa1);
+  const factions = seedFactions(newId);
+  const [playerFaction, hostileFaction, neutralFaction] = factions.map((f) => f.id) as [
+    Id<'faction'>,
+    Id<'faction'>,
+    Id<'faction'>,
+  ];
+
+  /* ---- art: one placeholder atlas ------------------------------------- */
+  const atlasId = id('atlas', 'placeholder');
+  const frameNames: string[] = [];
+  const frame = (name: string): string => {
+    if (!frameNames.includes(name)) frameNames.push(name);
+    return name;
+  };
+  const terrainFrame = (name: string) => ({ atlasId, frame: frame(`terrain/${name}`) });
+
+  const clip = (prefix: string, name: string, frames: number, frameMs: number, loop: boolean): ClipDef => ({
+    frames: [Array.from({ length: frames }, (_, i) => frame(`${prefix}/${name}/${i}`))],
+    frameMs,
+    loop,
+    cues: undefined,
+  });
+  const animSet = (name: string, attackClips: string[]): AnimationSetDef => {
+    const clips: Record<string, ClipDef> = {
+      idle: clip(name, 'idle', 2, 400, true),
+      move: clip(name, 'move', 4, 120, true),
+      dodge: clip(name, 'dodge', 2, 100, false),
+      hurt: clip(name, 'hurt', 1, 150, false),
+      death: clip(name, 'death', 3, 150, false),
+    };
+    for (const attack of attackClips) {
+      clips[`${attack}-windup`] = clip(name, `${attack}-windup`, 2, 100, false);
+      clips[`${attack}-active`] = clip(name, `${attack}-active`, 1, 80, false);
+      clips[`${attack}-recovery`] = clip(name, `${attack}-recovery`, 2, 100, false);
+    }
+    return {
+      id: id('animset', name),
+      name,
+      atlasId,
+      directions: 1,
+      mirror: false,
+      clips,
+      stateClips: { idle: 'idle', move: 'move', dodge: 'dodge', hurt: 'hurt', death: 'death' },
+    };
+  };
+  const animationSets = [
+    animSet('hero', ['slash', 'thrust']),
+    animSet('elder', []),
+    animSet('sentry', ['stab']),
+    animSet('boss', ['slam', 'sweep']),
+  ];
+  const sparkFrame = { atlasId, frame: frame('fx/spark') };
+
+  /* ---- terrain --------------------------------------------------------- */
+  const terrain = (name: string, passable: TerrainDef['passable'], extra: Partial<TerrainDef> = {}): TerrainDef => ({
+    id: id('terrain', name),
+    name,
+    top: terrainFrame(name),
+    cliff: terrainFrame('cliff'),
+    passable,
+    ...terrainDefaults(passable),
+    contact: undefined,
+    ...extra,
+  });
+  const land = { walk: true, swim: false, fly: true };
+  const terrains: TerrainDef[] = [
+    terrain('grass', land),
+    terrain('dirt', land),
+    terrain('stone', land),
+    terrain('lava', land, {
+      moveCost: 4,
+      contact: { everyMs: 500, actions: [{ type: 'modify-health', target: { by: 'subject' }, delta: -5 }] },
+    }),
+    terrain('water', { walk: false, swim: true, fly: true }),
+    terrain('rock', { walk: false, swim: false, fly: false }),
+  ];
+
+  /* ---- variables ------------------------------------------------------- */
+  const variable = (key: string, type: VariableDef['type'], initial: VariableDef['initial'], scope: VariableDef['scope'], readonly = false): VariableDef => ({
+    id: id('variable', key),
+    key,
+    name: key.replace(/_/g, ' '),
+    type,
+    initial,
+    scope,
+    readonly,
+    description: undefined,
+    category: undefined,
+  });
+  const variables: VariableDef[] = [
+    variable('talked_to_elder', 'bool', false, 'save'),
+    variable('boss_enraged', 'bool', false, 'save'),
+    variable('ember_pulses', 'number', 0, 'save'),
+    variable('lucky_pulses', 'number', 0, 'save'),
+    variable('arena_visits', 'number', 0, 'session'),
+    variable('elder_greeting', 'string', 'The plateau sentry sees further than you think.', 'save', true),
+  ];
+  const v = (key: string): Id<'variable'> => id('variable', key);
+
+  /* ---- feedback, particles, effects ------------------------------------ */
+  const feedback: FeedbackDef[] = [
+    {
+      id: id('feedback', 'hit'),
+      name: 'hit',
+      flash: { color: '#ffffff', ms: 80 },
+      shake: { amplitude: 0.08, ms: 120 },
+      particles: { presetId: id('particles', 'spark'), count: 6 },
+      sfx: undefined,
+      groundIndicator: undefined,
+    },
+    {
+      id: id('feedback', 'heavy-hit'),
+      name: 'heavy hit',
+      flash: { color: '#ffd27f', ms: 120 },
+      shake: { amplitude: 0.3, ms: 260 },
+      particles: { presetId: id('particles', 'spark'), count: 14 },
+      sfx: undefined,
+      groundIndicator: undefined,
+    },
+    { id: id('feedback', 'telegraph'), name: 'telegraph', flash: undefined, shake: undefined, particles: undefined, sfx: undefined, groundIndicator: { ms: 900 } },
+    { id: id('feedback', 'hurt'), name: 'hurt', flash: { color: '#ff4040', ms: 100 }, shake: undefined, particles: undefined, sfx: undefined, groundIndicator: undefined },
+    {
+      id: id('feedback', 'death'),
+      name: 'death',
+      flash: { color: '#202020', ms: 200 },
+      shake: { amplitude: 0.15, ms: 200 },
+      particles: { presetId: id('particles', 'spark'), count: 20 },
+      sfx: undefined,
+      groundIndicator: undefined,
+    },
+  ];
+  const fb = (name: string): Id<'feedback'> => id('feedback', name);
+
+  const statusEffects: StatusEffectDef[] = [
+    {
+      id: id('status', 'stunned'),
+      name: 'stunned',
+      duration: { kind: 'ms', value: 600 },
+      stackMode: 'refresh',
+      maxStacks: undefined,
+      stackScope: 'global',
+      restricts: ['move', 'attack', 'dodge'],
+      flags: undefined,
+      periodic: undefined,
+    },
+    {
+      id: id('status', 'burning'),
+      name: 'burning',
+      duration: { kind: 'ms', value: 3000 },
+      stackMode: 'stack',
+      maxStacks: 3,
+      stackScope: 'global',
+      restricts: undefined,
+      flags: undefined,
+      periodic: { interval: { kind: 'ms', value: 500 }, actions: [{ type: 'modify-health', target: { by: 'subject' }, delta: -1 }] },
+    },
+    {
+      id: id('status', 'warded'),
+      name: 'warded',
+      duration: { kind: 'turns', value: 1 },
+      stackMode: 'ignore',
+      maxStacks: undefined,
+      stackScope: 'global',
+      restricts: undefined,
+      flags: ['invulnerable'],
+      periodic: undefined,
+    },
+  ];
+
+  /* ---- attacks ---------------------------------------------------------- */
+  const attack = (name: string, a: Omit<AttackDef, 'id' | 'name' | 'clips' | 'aiRange'> & { clip: string; aiRange?: number }): AttackDef => {
+    const { clip: clipName, ...rest } = a;
+    return {
+      id: id('attack', name),
+      name,
+      ...rest,
+      clips: { windup: `${clipName}-windup`, active: `${clipName}-active`, recovery: `${clipName}-recovery` },
+      aiRange: a.aiRange,
+    };
+  };
+  const hurt = (delta: number) => ({ type: 'modify-health' as const, target: { by: 'other' as const }, delta });
+  const attacks: AttackDef[] = [
+    attack('slash', {
+      windupMs: 80, activeMs: 100, recoveryMs: 160, cooldownMs: 0,
+      hitbox: { shape: 'arc', range: 1.6, arcDeg: 110 },
+      verticalReach: 1, knockback: 2, hitstopMs: 50,
+      onHit: [hurt(-10)],
+      moveDuring: 'slowed', clip: 'slash',
+      feedback: { windup: undefined, hit: fb('hit') },
+    }),
+    attack('thrust', {
+      windupMs: 260, activeMs: 120, recoveryMs: 300, cooldownMs: 600,
+      hitbox: { shape: 'line', length: 2.6, width: 0.7 },
+      verticalReach: 1, knockback: 5, hitstopMs: 90,
+      onHit: [hurt(-24)],
+      moveDuring: 'rooted', clip: 'thrust',
+      feedback: { windup: undefined, hit: fb('heavy-hit') },
+    }),
+    attack('stab', {
+      windupMs: 350, activeMs: 100, recoveryMs: 350, cooldownMs: 900,
+      hitbox: { shape: 'arc', range: 1.5, arcDeg: 70 },
+      verticalReach: 1, knockback: 2, hitstopMs: 50,
+      onHit: [hurt(-8)],
+      moveDuring: 'rooted', clip: 'stab',
+      feedback: { windup: fb('telegraph'), hit: fb('hit') },
+      aiRange: 1.3,
+    }),
+    attack('slam', {
+      windupMs: 900, activeMs: 120, recoveryMs: 600, cooldownMs: 2500,
+      hitbox: { shape: 'circle', radius: 2.2, offset: 1.5 },
+      verticalReach: 1.5, knockback: 9, hitstopMs: 120,
+      onHit: [hurt(-30), { type: 'apply-effect', target: { by: 'other' }, statusId: id('status', 'stunned') }],
+      moveDuring: 'rooted', clip: 'slam',
+      feedback: { windup: fb('telegraph'), hit: fb('heavy-hit') },
+      aiRange: 3,
+    }),
+    attack('sweep', {
+      windupMs: 450, activeMs: 150, recoveryMs: 400, cooldownMs: 1500,
+      hitbox: { shape: 'arc', range: 2.4, arcDeg: 180 },
+      verticalReach: 1.5, knockback: 4, hitstopMs: 70,
+      onHit: [hurt(-16)],
+      moveDuring: 'rooted', clip: 'sweep',
+      feedback: { windup: fb('telegraph'), hit: fb('hit') },
+      aiRange: 2.2,
+    }),
+    attack('enraged-slam', {
+      windupMs: 700, activeMs: 120, recoveryMs: 450, cooldownMs: 1200,
+      hitbox: { shape: 'circle', radius: 2.4, offset: 1.5 },
+      verticalReach: 1.5, knockback: 10, hitstopMs: 120,
+      onHit: [hurt(-34), { type: 'apply-effect', target: { by: 'other' }, statusId: id('status', 'stunned') }],
+      moveDuring: 'rooted', clip: 'slam',
+      feedback: { windup: fb('telegraph'), hit: fb('heavy-hit') },
+      aiRange: 3,
+    }),
+    attack('enraged-sweep', {
+      windupMs: 350, activeMs: 150, recoveryMs: 300, cooldownMs: 700,
+      hitbox: { shape: 'arc', range: 2.4, arcDeg: 200 },
+      verticalReach: 1.5, knockback: 4, hitstopMs: 70,
+      onHit: [hurt(-18)],
+      moveDuring: 'rooted', clip: 'sweep',
+      feedback: { windup: fb('telegraph'), hit: fb('hit') },
+      aiRange: 2.2,
+    }),
+  ];
+  const atk = (name: string): Id<'attack'> => id('attack', name);
+
+  /* ---- brains ----------------------------------------------------------- */
+  const sentryBrain: BrainDef = {
+    id: id('brain', 'sentry'),
+    name: 'sentry',
+    initial: 'guard',
+    states: [
+      { id: 'guard', behavior: { kind: 'idle' }, onEnter: undefined, transitions: [{ to: 'chase', when: [{ type: 'has-target' }], afterMs: undefined }] },
+      {
+        id: 'chase',
+        behavior: { kind: 'chase' },
+        onEnter: undefined,
+        transitions: [
+          { to: 'return', when: [{ type: 'away-from-home', distance: 16 }], afterMs: undefined },
+          { to: 'return', when: [{ type: 'not', of: { type: 'has-target' } }], afterMs: undefined },
+          { to: 'fight', when: [{ type: 'target-within', distance: 1.3 }], afterMs: undefined },
+        ],
+      },
+      {
+        id: 'fight',
+        behavior: { kind: 'attack', attackIds: [atk('stab')], pick: 'sequence' },
+        onEnter: undefined,
+        transitions: [
+          { to: 'return', when: [{ type: 'not', of: { type: 'has-target' } }], afterMs: undefined },
+          { to: 'chase', when: [{ type: 'not', of: { type: 'target-within', distance: 1.8 } }], afterMs: 300 },
+        ],
+      },
+      {
+        id: 'return',
+        behavior: { kind: 'return-home' },
+        onEnter: undefined,
+        transitions: [
+          { to: 'guard', when: [{ type: 'not', of: { type: 'away-from-home', distance: 0.5 } }], afterMs: undefined },
+          { to: 'chase', when: [{ type: 'has-target' }, { type: 'not', of: { type: 'away-from-home', distance: 12 } }], afterMs: 1500 },
+        ],
+      },
+    ],
+  };
+  const bossFight = (stateId: string, chaseId: string, attackNames: string[], pick: 'sequence' | 'random'): BrainDef['states'] => [
+    {
+      id: chaseId,
+      behavior: { kind: 'chase' },
+      onEnter: undefined,
+      transitions: [
+        { to: stateId, when: [{ type: 'target-within', distance: 2.6 }], afterMs: undefined },
+        { to: 'rest', when: [{ type: 'not', of: { type: 'has-target' } }], afterMs: 2000 },
+      ],
+    },
+    {
+      id: stateId,
+      behavior: { kind: 'attack', attackIds: attackNames.map(atk), pick },
+      onEnter: undefined,
+      transitions: [{ to: chaseId, when: [{ type: 'not', of: { type: 'target-within', distance: 3.2 } }], afterMs: 400 }],
+    },
+  ];
+  const bossBrain: BrainDef = {
+    id: id('brain', 'boss'),
+    name: 'boss',
+    initial: 'rest',
+    states: [
+      { id: 'rest', behavior: { kind: 'idle' }, onEnter: undefined, transitions: [{ to: 'hunt', when: [{ type: 'has-target' }], afterMs: undefined }] },
+      ...bossFight('fight', 'hunt', ['slam', 'sweep'], 'sequence'),
+      // Entered only through the health-crossed trigger's set-brain-state.
+      { id: 'enraged', behavior: { kind: 'idle' }, onEnter: [{ type: 'show-message', text: 'The warden roars!', ms: 2000 }], transitions: [{ to: 'rage-hunt', when: [], afterMs: 300 }] },
+      ...bossFight('rage-fight', 'rage-hunt', ['enraged-slam', 'enraged-sweep'], 'random').map((s) =>
+        s.id === 'rage-hunt' ? { ...s, transitions: s.transitions.filter((t) => t.to !== 'rest') } : s,
+      ),
+    ],
+  };
+  const wanderBrain: BrainDef = {
+    id: id('brain', 'villager'),
+    name: 'villager',
+    initial: 'stand',
+    states: [
+      { id: 'stand', behavior: { kind: 'idle' }, onEnter: undefined, transitions: [{ to: 'stroll', when: [{ type: 'chance', probability: 0.5 }], afterMs: 2000 }] },
+      { id: 'stroll', behavior: { kind: 'wander', radius: 2 }, onEnter: undefined, transitions: [{ to: 'stand', when: [], afterMs: 3000 }] },
+    ],
+  };
+
+  /* ---- archetypes -------------------------------------------------------- */
+  const walker = (speed: number): NonNullable<ArchetypeDef['components']['movement']> => ({
+    speed,
+    turnRate: 12,
+    modes: ['walk'],
+    startMode: 'walk',
+  });
+  const archetypes: ArchetypeDef[] = [
+    {
+      id: id('archetype', 'hero'),
+      name: 'Hero',
+      tags: ['hero'],
+      components: {
+        collider: { radius: 0.35, height: 1.6, solid: true },
+        movement: walker(4.5),
+        motion: { mass: 1, friction: 12 },
+        health: { max: 100 },
+        faction: { factionId: playerFaction },
+        sight: { range: 12, eyeHeight: 1.4 },
+        attacker: { attackIds: [atk('slash'), atk('thrust')] },
+        dodge: { distance: 3, durationMs: 250, iframeMs: 200, cooldownMs: 700 },
+        sprite: { animationSetId: id('animset', 'hero'), scale: undefined },
+        feedback: { onHurt: fb('hurt'), onDeath: fb('death') },
+        playerControlled: {},
+        persistent: {},
+        onDeath: { actions: [{ type: 'end-session', outcome: 'defeat' }], despawnAfterMs: 1500 },
+      },
+    },
+    {
+      id: id('archetype', 'elder'),
+      name: 'Elder',
+      tags: ['villager'],
+      components: {
+        collider: { radius: 0.35, height: 1.5, solid: true },
+        movement: walker(1.2),
+        faction: { factionId: neutralFaction },
+        brain: { brainId: wanderBrain.id },
+        sprite: { animationSetId: id('animset', 'elder'), scale: undefined },
+        interactable: { radius: 1.5, prompt: 'Talk' },
+      },
+    },
+    {
+      id: id('archetype', 'sentry'),
+      name: 'Sentry',
+      tags: ['enemy', 'sentry'],
+      components: {
+        collider: { radius: 0.4, height: 1.7, solid: true },
+        movement: walker(3.4),
+        motion: { mass: 1.2, friction: 12 },
+        health: { max: 40 },
+        faction: { factionId: hostileFaction },
+        sight: { range: 11, eyeHeight: 1.5 },
+        acquisition: { range: 11, forgetMs: 4000 },
+        attacker: { attackIds: [atk('stab')] },
+        brain: { brainId: sentryBrain.id },
+        sprite: { animationSetId: id('animset', 'sentry'), scale: undefined },
+        feedback: { onHurt: fb('hurt'), onDeath: fb('death') },
+        onDeath: { actions: [], despawnAfterMs: 1200 },
+      },
+    },
+    {
+      id: id('archetype', 'warden'),
+      name: 'Ember Warden',
+      tags: ['enemy', 'boss'],
+      components: {
+        collider: { radius: 0.8, height: 2.6, solid: true },
+        movement: walker(2.4),
+        motion: { mass: 6, friction: 14 },
+        health: { max: 300 },
+        faction: { factionId: hostileFaction },
+        sight: { range: 14, eyeHeight: 2.2 },
+        acquisition: { range: 9, forgetMs: 8000 },
+        attacker: { attackIds: [atk('slam'), atk('sweep'), atk('enraged-slam'), atk('enraged-sweep')] },
+        brain: { brainId: bossBrain.id },
+        sprite: { animationSetId: id('animset', 'boss'), scale: 1.6 },
+        feedback: { onHurt: fb('hurt'), onDeath: fb('death') },
+        onDeath: { actions: [], despawnAfterMs: 2000 },
+      },
+    },
+  ];
+  const arch = (name: string): Id<'archetype'> => id('archetype', name);
+
+  /* ---- the map ----------------------------------------------------------- */
+  const E = EMBERFALL;
+  const paint = new MapPainter(E.width, E.height);
+  paint.fill({ col: 0, row: 0, w: E.width, h: E.height }, T.grass, 0);
+  paint.frame({ col: 0, row: 0, w: E.width, h: E.height }, T.rock, 0);
+  paint.fill(E.village, T.dirt, 0);
+  paint.fill(E.pond, T.water, 0);
+  paint.fill(E.lava, T.lava, 0);
+  paint.fill(E.plateau, T.stone, 2);
+  paint.setRamp(E.rampLow.col, E.rampLow.row, T.stone, 0, 1);
+  paint.setRamp(E.rampHigh.col, E.rampHigh.row, T.stone, 1, 1);
+  paint.fill(E.arena, T.stone, 0);
+  paint.frame(E.arena, T.rock, 0);
+  paint.fill({ col: E.arenaGate.col, row: E.arenaGate.row, w: 1, h: 1 }, T.stone, 0);
+  paint.setRamp(E.brokenRamp.col, E.brokenRamp.row, T.dirt, 0, 1);
+
+  const place = (name: string, archetype: string, cell: { col: number; row: number }, facing: number): EntityPlacement => ({
+    key: id('placement', name),
+    archetypeId: arch(archetype),
+    ...cellCenter(cell.col, cell.row),
+    facing,
+    overrides: undefined,
+  });
+  const elder = id('placement', 'elder');
+  const boss = id('placement', 'warden');
+  const arenaRegion = id('region', 'arena');
+  const arenaInside: Rect = { col: E.arena.col + 1, row: E.arena.row + 1, w: E.arena.w - 2, h: E.arena.h - 2 };
+
+  const trigger = (name: string, when: TriggerDef['when'], then: TriggerDef['then'], opts: Partial<Pick<TriggerDef, 'given' | 'once' | 'enabled'>> = {}): TriggerDef => ({
+    id: id('trigger', name),
+    when,
+    given: opts.given ?? [],
+    then,
+    once: opts.once ?? false,
+    enabled: opts.enabled ?? true,
+  });
+
+  const start = cellCenter(E.playerStart.col, E.playerStart.row);
+  const map: MapDef = {
+    id: id('map', 'emberfall'),
+    name: 'Emberfall',
+    width: E.width,
+    height: E.height,
+    terrainPalette: terrains.map((t) => t.id),
+    layers: paint.layers(),
+    playerStart: { x: start.x, y: start.y, facing: 0 },
+    placements: [
+      place('elder', 'elder', E.elder, 0),
+      place('sentry', 'sentry', E.sentry, Math.PI / 2),
+      place('warden', 'warden', E.boss, Math.PI),
+    ],
+    regions: [
+      { id: arenaRegion, name: 'Boss arena', cells: regionCells(arenaInside) },
+      { id: id('region', 'village'), name: 'Village', cells: regionCells(E.village) },
+    ],
+    triggers: [
+      trigger('talk-to-elder', { type: 'interacted', target: { by: 'placement', key: elder } }, [
+        { type: 'show-message', text: 'The plateau sentry sees further than you think.', ms: 3000 },
+        { type: 'set-variable', variableId: v('talked_to_elder'), op: { kind: 'set', value: true } },
+      ]),
+      trigger(
+        'enter-arena',
+        { type: 'region-entered', regionId: arenaRegion, who: { by: 'player' } },
+        [
+          { type: 'set-variable', variableId: v('arena_visits'), op: { kind: 'add', value: 1 } },
+          { type: 'show-message', text: 'The Ember Warden stirs.', ms: 2500 },
+        ],
+      ),
+      trigger(
+        'warden-enrages',
+        { type: 'health-crossed', who: { by: 'placement', key: boss }, belowFraction: 0.5 },
+        [
+          { type: 'set-brain-state', target: { by: 'placement', key: boss }, state: 'enraged' },
+          { type: 'set-variable', variableId: v('boss_enraged'), op: { kind: 'set', value: true } },
+        ],
+        { once: true },
+      ),
+      trigger('warden-dies', { type: 'entity-died', who: { by: 'placement', key: boss } }, [{ type: 'end-session', outcome: 'victory' }]),
+    ],
+    bgm: undefined,
+  };
+
+  /* ---- global triggers: a heartbeat that exercises timers, RNG, variables -- */
+  const triggers: TriggerDef[] = [
+    trigger('start-pulse', { type: 'map-loaded' }, [{ type: 'start-timer', timerId: 'ember-pulse', ms: 1000, repeat: true }]),
+    trigger('count-pulse', { type: 'timer-fired', timerId: 'ember-pulse' }, [
+      { type: 'set-variable', variableId: v('ember_pulses'), op: { kind: 'add', value: 1 } },
+    ]),
+    trigger(
+      'lucky-pulse',
+      { type: 'variable-changed', variableId: v('ember_pulses') },
+      [{ type: 'set-variable', variableId: v('lucky_pulses'), op: { kind: 'add', value: 1 } }],
+      { given: [{ type: 'chance', probability: 0.35 }] },
+    ),
+  ];
+
+  return {
+    ...projectEnvelope(id('project', 'emberfall'), 'Emberfall'),
+    contentRevision: 1,
+    startMapId: map.id,
+    settings: defaultSettings(arch('hero')),
+    assets: { vectorSources: [], images: [], atlases: [placeholderAtlas(atlasId, frameNames)], audio: [] },
+    terrains,
+    maps: [map],
+    archetypes,
+    animationSets,
+    attacks,
+    brains: [sentryBrain, bossBrain, wanderBrain],
+    statusEffects,
+    feedback,
+    particlePresets: [
+      { id: id('particles', 'spark'), frame: sparkFrame, lifetimeMs: 350, speed: [1, 4], spreadDeg: 360, gravity: 6, scale: [0.2, 0.5], fadeOut: true },
+    ],
+    factions,
+    variables,
+    inputActions: seedInputActions(newId),
+    triggers,
+  };
+}

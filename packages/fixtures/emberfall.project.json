@@ -1,0 +1,3234 @@
+{
+  "schemaVersion": 2,
+  "schemaMinor": 0,
+  "id": "842463ec-751c-4cc4-89f7-e8eaf9b4d8ed",
+  "name": "Emberfall",
+  "contentRevision": 1,
+  "startMapId": "b27a645c-457d-470b-b42a-63f16c9170a3",
+  "settings": {
+    "playerArchetypeId": "8775ec6b-fdfa-4b19-a357-2fe9a20bc9d3",
+    "msPerTurn": 3000,
+    "hexSize": 1,
+    "levelHeight": 0.5,
+    "maxLevel": 15,
+    "pixelsPerUnit": 64,
+    "sight": {
+      "uphillBlocked": true,
+      "uphillRevealRange": 1.5
+    },
+    "friendlyFire": false
+  },
+  "assets": {
+    "vectorSources": [],
+    "images": [],
+    "atlases": [
+      {
+        "id": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "sourceIds": [],
+        "tiers": [
+          {
+            "scale": 1,
+            "image": {
+              "blobId": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "mime": "image/png",
+              "byteSize": 0,
+              "width": 1024,
+              "height": 384
+            },
+            "frames": {
+              "hero/idle/0": {
+                "x": 0,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/idle/1": {
+                "x": 64,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/move/0": {
+                "x": 128,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/move/1": {
+                "x": 192,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/move/2": {
+                "x": 256,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/move/3": {
+                "x": 320,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/dodge/0": {
+                "x": 384,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/dodge/1": {
+                "x": 448,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/hurt/0": {
+                "x": 512,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/death/0": {
+                "x": 576,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/death/1": {
+                "x": 640,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/death/2": {
+                "x": 704,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/slash-windup/0": {
+                "x": 768,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/slash-windup/1": {
+                "x": 832,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/slash-active/0": {
+                "x": 896,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/slash-recovery/0": {
+                "x": 960,
+                "y": 0,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/slash-recovery/1": {
+                "x": 0,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/thrust-windup/0": {
+                "x": 64,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/thrust-windup/1": {
+                "x": 128,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/thrust-active/0": {
+                "x": 192,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/thrust-recovery/0": {
+                "x": 256,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "hero/thrust-recovery/1": {
+                "x": 320,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/idle/0": {
+                "x": 384,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/idle/1": {
+                "x": 448,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/move/0": {
+                "x": 512,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/move/1": {
+                "x": 576,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/move/2": {
+                "x": 640,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/move/3": {
+                "x": 704,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/dodge/0": {
+                "x": 768,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/dodge/1": {
+                "x": 832,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/hurt/0": {
+                "x": 896,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/death/0": {
+                "x": 960,
+                "y": 64,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/death/1": {
+                "x": 0,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "elder/death/2": {
+                "x": 64,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/idle/0": {
+                "x": 128,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/idle/1": {
+                "x": 192,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/move/0": {
+                "x": 256,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/move/1": {
+                "x": 320,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/move/2": {
+                "x": 384,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/move/3": {
+                "x": 448,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/dodge/0": {
+                "x": 512,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/dodge/1": {
+                "x": 576,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/hurt/0": {
+                "x": 640,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/death/0": {
+                "x": 704,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/death/1": {
+                "x": 768,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/death/2": {
+                "x": 832,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/stab-windup/0": {
+                "x": 896,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/stab-windup/1": {
+                "x": 960,
+                "y": 128,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/stab-active/0": {
+                "x": 0,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/stab-recovery/0": {
+                "x": 64,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "sentry/stab-recovery/1": {
+                "x": 128,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/idle/0": {
+                "x": 192,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/idle/1": {
+                "x": 256,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/move/0": {
+                "x": 320,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/move/1": {
+                "x": 384,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/move/2": {
+                "x": 448,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/move/3": {
+                "x": 512,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/dodge/0": {
+                "x": 576,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/dodge/1": {
+                "x": 640,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/hurt/0": {
+                "x": 704,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/death/0": {
+                "x": 768,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/death/1": {
+                "x": 832,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/death/2": {
+                "x": 896,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/slam-windup/0": {
+                "x": 960,
+                "y": 192,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/slam-windup/1": {
+                "x": 0,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/slam-active/0": {
+                "x": 64,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/slam-recovery/0": {
+                "x": 128,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/slam-recovery/1": {
+                "x": 192,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/sweep-windup/0": {
+                "x": 256,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/sweep-windup/1": {
+                "x": 320,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/sweep-active/0": {
+                "x": 384,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/sweep-recovery/0": {
+                "x": 448,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "boss/sweep-recovery/1": {
+                "x": 512,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "fx/spark": {
+                "x": 576,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/grass": {
+                "x": 640,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/cliff": {
+                "x": 704,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/dirt": {
+                "x": 768,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/stone": {
+                "x": 832,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/lava": {
+                "x": 896,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/water": {
+                "x": 960,
+                "y": 256,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              },
+              "terrain/rock": {
+                "x": 0,
+                "y": 320,
+                "w": 64,
+                "h": 64,
+                "anchorX": 32,
+                "anchorY": 64
+              }
+            }
+          },
+          {
+            "scale": 2,
+            "image": {
+              "blobId": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "mime": "image/png",
+              "byteSize": 0,
+              "width": 2048,
+              "height": 768
+            },
+            "frames": {
+              "hero/idle/0": {
+                "x": 0,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/idle/1": {
+                "x": 128,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/move/0": {
+                "x": 256,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/move/1": {
+                "x": 384,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/move/2": {
+                "x": 512,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/move/3": {
+                "x": 640,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/dodge/0": {
+                "x": 768,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/dodge/1": {
+                "x": 896,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/hurt/0": {
+                "x": 1024,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/death/0": {
+                "x": 1152,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/death/1": {
+                "x": 1280,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/death/2": {
+                "x": 1408,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/slash-windup/0": {
+                "x": 1536,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/slash-windup/1": {
+                "x": 1664,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/slash-active/0": {
+                "x": 1792,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/slash-recovery/0": {
+                "x": 1920,
+                "y": 0,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/slash-recovery/1": {
+                "x": 0,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/thrust-windup/0": {
+                "x": 128,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/thrust-windup/1": {
+                "x": 256,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/thrust-active/0": {
+                "x": 384,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/thrust-recovery/0": {
+                "x": 512,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "hero/thrust-recovery/1": {
+                "x": 640,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/idle/0": {
+                "x": 768,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/idle/1": {
+                "x": 896,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/move/0": {
+                "x": 1024,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/move/1": {
+                "x": 1152,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/move/2": {
+                "x": 1280,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/move/3": {
+                "x": 1408,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/dodge/0": {
+                "x": 1536,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/dodge/1": {
+                "x": 1664,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/hurt/0": {
+                "x": 1792,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/death/0": {
+                "x": 1920,
+                "y": 128,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/death/1": {
+                "x": 0,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "elder/death/2": {
+                "x": 128,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/idle/0": {
+                "x": 256,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/idle/1": {
+                "x": 384,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/move/0": {
+                "x": 512,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/move/1": {
+                "x": 640,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/move/2": {
+                "x": 768,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/move/3": {
+                "x": 896,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/dodge/0": {
+                "x": 1024,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/dodge/1": {
+                "x": 1152,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/hurt/0": {
+                "x": 1280,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/death/0": {
+                "x": 1408,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/death/1": {
+                "x": 1536,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/death/2": {
+                "x": 1664,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/stab-windup/0": {
+                "x": 1792,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/stab-windup/1": {
+                "x": 1920,
+                "y": 256,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/stab-active/0": {
+                "x": 0,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/stab-recovery/0": {
+                "x": 128,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "sentry/stab-recovery/1": {
+                "x": 256,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/idle/0": {
+                "x": 384,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/idle/1": {
+                "x": 512,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/move/0": {
+                "x": 640,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/move/1": {
+                "x": 768,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/move/2": {
+                "x": 896,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/move/3": {
+                "x": 1024,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/dodge/0": {
+                "x": 1152,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/dodge/1": {
+                "x": 1280,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/hurt/0": {
+                "x": 1408,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/death/0": {
+                "x": 1536,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/death/1": {
+                "x": 1664,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/death/2": {
+                "x": 1792,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/slam-windup/0": {
+                "x": 1920,
+                "y": 384,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/slam-windup/1": {
+                "x": 0,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/slam-active/0": {
+                "x": 128,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/slam-recovery/0": {
+                "x": 256,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/slam-recovery/1": {
+                "x": 384,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/sweep-windup/0": {
+                "x": 512,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/sweep-windup/1": {
+                "x": 640,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/sweep-active/0": {
+                "x": 768,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/sweep-recovery/0": {
+                "x": 896,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "boss/sweep-recovery/1": {
+                "x": 1024,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "fx/spark": {
+                "x": 1152,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/grass": {
+                "x": 1280,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/cliff": {
+                "x": 1408,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/dirt": {
+                "x": 1536,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/stone": {
+                "x": 1664,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/lava": {
+                "x": 1792,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/water": {
+                "x": 1920,
+                "y": 512,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              },
+              "terrain/rock": {
+                "x": 0,
+                "y": 640,
+                "w": 128,
+                "h": 128,
+                "anchorX": 64,
+                "anchorY": 128
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "audio": []
+  },
+  "terrains": [
+    {
+      "id": "339830cd-b969-43ab-b257-dffda26596c8",
+      "name": "grass",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/grass"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": true,
+        "swim": false,
+        "fly": true
+      },
+      "moveCost": 1,
+      "blocksSight": false,
+      "blocksProjectiles": false
+    },
+    {
+      "id": "6ca63f6d-428a-4e4c-90b6-01395b99394d",
+      "name": "dirt",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/dirt"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": true,
+        "swim": false,
+        "fly": true
+      },
+      "moveCost": 1,
+      "blocksSight": false,
+      "blocksProjectiles": false
+    },
+    {
+      "id": "0c6a1b04-1b9b-49a6-873a-e317208f3a3a",
+      "name": "stone",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/stone"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": true,
+        "swim": false,
+        "fly": true
+      },
+      "moveCost": 1,
+      "blocksSight": false,
+      "blocksProjectiles": false
+    },
+    {
+      "id": "9793a0ba-d388-4bb9-8261-a0d9c6c8724f",
+      "name": "lava",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/lava"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": true,
+        "swim": false,
+        "fly": true
+      },
+      "moveCost": 4,
+      "blocksSight": false,
+      "blocksProjectiles": false,
+      "contact": {
+        "everyMs": 500,
+        "actions": [
+          {
+            "type": "modify-health",
+            "target": {
+              "by": "subject"
+            },
+            "delta": -5
+          }
+        ]
+      }
+    },
+    {
+      "id": "b42498ba-f5ea-492a-aa3a-18239ccbbfe2",
+      "name": "water",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/water"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": false,
+        "swim": true,
+        "fly": true
+      },
+      "moveCost": 1,
+      "blocksSight": false,
+      "blocksProjectiles": false
+    },
+    {
+      "id": "d82cde61-6b96-4af6-a850-7c797e68480f",
+      "name": "rock",
+      "top": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/rock"
+      },
+      "cliff": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "terrain/cliff"
+      },
+      "passable": {
+        "walk": false,
+        "swim": false,
+        "fly": false
+      },
+      "moveCost": 1,
+      "blocksSight": true,
+      "blocksProjectiles": true
+    }
+  ],
+  "maps": [
+    {
+      "id": "b27a645c-457d-470b-b42a-63f16c9170a3",
+      "name": "Emberfall",
+      "width": 48,
+      "height": 32,
+      "terrainPalette": [
+        "339830cd-b969-43ab-b257-dffda26596c8",
+        "6ca63f6d-428a-4e4c-90b6-01395b99394d",
+        "0c6a1b04-1b9b-49a6-873a-e317208f3a3a",
+        "9793a0ba-d388-4bb9-8261-a0d9c6c8724f",
+        "b42498ba-f5ea-492a-aa3a-18239ccbbfe2",
+        "d82cde61-6b96-4af6-a850-7c797e68480f"
+      ],
+      "layers": {
+        "terrain": "BQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAUABQAFAAUABQAFAAUABQAFAAUABQAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEABAAEAAQAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEABAAEAAQAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQADAAMAAwADAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAIAAgACAAIAAgACAAIAAgACAAIABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAUABQAFAAUABQAFAAUABQAFAAUABQAAAAUABQAAAAEAAQABAAEAAQABAAEAAQABAAEAAQABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUABQAFAAUA",
+        "level": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "ramp": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "playerStart": {
+        "x": 13.856406460551018,
+        "y": 33,
+        "facing": 0
+      },
+      "placements": [
+        {
+          "key": "cfa83261-136b-402a-a4c0-93deaacdd78d",
+          "archetypeId": "ebbec8c7-cb09-4a06-bf1e-f80cb7f85ac8",
+          "x": 10.392304845413264,
+          "y": 36,
+          "facing": 0
+        },
+        {
+          "key": "f9086bd6-44a1-49f3-bd1f-2d5f83782a70",
+          "archetypeId": "27b482a5-f970-4529-b3a7-0b1cae7dbc71",
+          "x": 38.97114317029974,
+          "y": 16.5,
+          "facing": 1.5707963267948966
+        },
+        {
+          "key": "937ff624-f2bd-4214-bcc4-81b0a04e553d",
+          "archetypeId": "197b6b57-a6e9-4032-8823-417e639c09b5",
+          "x": 71.01408311032397,
+          "y": 33,
+          "facing": 3.141592653589793
+        }
+      ],
+      "regions": [
+        {
+          "id": "ff653fbd-e9f3-4162-93dc-28e666668ec7",
+          "name": "Boss arena",
+          "cells": "GwARABwAEQAdABEAHgARAB8AEQAgABEAIQARACIAEQAjABEAJAARABoAEgAbABIAHAASAB0AEgAeABIAHwASACAAEgAhABIAIgASACMAEgAaABMAGwATABwAEwAdABMAHgATAB8AEwAgABMAIQATACIAEwAjABMAGQAUABoAFAAbABQAHAAUAB0AFAAeABQAHwAUACAAFAAhABQAIgAUABkAFQAaABUAGwAVABwAFQAdABUAHgAVAB8AFQAgABUAIQAVACIAFQAYABYAGQAWABoAFgAbABYAHAAWAB0AFgAeABYAHwAWACAAFgAhABYAGAAXABkAFwAaABcAGwAXABwAFwAdABcAHgAXAB8AFwAgABcAIQAXABcAGAAYABgAGQAYABoAGAAbABgAHAAYAB0AGAAeABgAHwAYACAAGAAXABkAGAAZABkAGQAaABkAGwAZABwAGQAdABkAHgAZAB8AGQAgABkAFgAaABcAGgAYABoAGQAaABoAGgAbABoAHAAaAB0AGgAeABoAHwAaABYAGwAXABsAGAAbABkAGwAaABsAGwAbABwAGwAdABsAHgAbAB8AGwA="
+        },
+        {
+          "id": "743aeb5a-b5f2-4cae-8798-f460f943ebf4",
+          "name": "Village",
+          "cells": "+f8SAPr/EgD7/xIA/P8SAP3/EgD+/xIA//8SAAAAEgABABIAAgASAAMAEgAEABIABQASAPn/EwD6/xMA+/8TAPz/EwD9/xMA/v8TAP//EwAAABMAAQATAAIAEwADABMABAATAAUAEwD4/xQA+f8UAPr/FAD7/xQA/P8UAP3/FAD+/xQA//8UAAAAFAABABQAAgAUAAMAFAAEABQA+P8VAPn/FQD6/xUA+/8VAPz/FQD9/xUA/v8VAP//FQAAABUAAQAVAAIAFQADABUABAAVAPf/FgD4/xYA+f8WAPr/FgD7/xYA/P8WAP3/FgD+/xYA//8WAAAAFgABABYAAgAWAAMAFgD3/xcA+P8XAPn/FwD6/xcA+/8XAPz/FwD9/xcA/v8XAP//FwAAABcAAQAXAAIAFwADABcA9v8YAPf/GAD4/xgA+f8YAPr/GAD7/xgA/P8YAP3/GAD+/xgA//8YAAAAGAABABgAAgAYAPb/GQD3/xkA+P8ZAPn/GQD6/xkA+/8ZAPz/GQD9/xkA/v8ZAP//GQAAABkAAQAZAAIAGQD1/xoA9v8aAPf/GgD4/xoA+f8aAPr/GgD7/xoA/P8aAP3/GgD+/xoA//8aAAAAGgABABoA9f8bAPb/GwD3/xsA+P8bAPn/GwD6/xsA+/8bAPz/GwD9/xsA/v8bAP//GwAAABsAAQAbAPT/HAD1/xwA9v8cAPf/HAD4/xwA+f8cAPr/HAD7/xwA/P8cAP3/HAD+/xwA//8cAAAAHAD0/x0A9f8dAPb/HQD3/x0A+P8dAPn/HQD6/x0A+/8dAPz/HQD9/x0A/v8dAP//HQAAAB0A"
+        }
+      ],
+      "triggers": [
+        {
+          "id": "cd4ea897-53cf-4564-b0db-929d2c980136",
+          "when": {
+            "type": "interacted",
+            "target": {
+              "by": "placement",
+              "key": "cfa83261-136b-402a-a4c0-93deaacdd78d"
+            }
+          },
+          "given": [],
+          "then": [
+            {
+              "type": "show-message",
+              "text": "The plateau sentry sees further than you think.",
+              "ms": 3000
+            },
+            {
+              "type": "set-variable",
+              "variableId": "11d17a17-17ad-4ea7-879b-552556a1ced2",
+              "op": {
+                "kind": "set",
+                "value": true
+              }
+            }
+          ],
+          "once": false,
+          "enabled": true
+        },
+        {
+          "id": "14269b22-ed6a-4441-a800-0ca4611cedb1",
+          "when": {
+            "type": "region-entered",
+            "regionId": "ff653fbd-e9f3-4162-93dc-28e666668ec7",
+            "who": {
+              "by": "player"
+            }
+          },
+          "given": [],
+          "then": [
+            {
+              "type": "set-variable",
+              "variableId": "be2b9347-d0a8-4696-896c-0ef9a3779b1c",
+              "op": {
+                "kind": "add",
+                "value": 1
+              }
+            },
+            {
+              "type": "show-message",
+              "text": "The Ember Warden stirs.",
+              "ms": 2500
+            }
+          ],
+          "once": false,
+          "enabled": true
+        },
+        {
+          "id": "ccc85c33-5f5d-4098-bfc9-b1289bdbc668",
+          "when": {
+            "type": "health-crossed",
+            "who": {
+              "by": "placement",
+              "key": "937ff624-f2bd-4214-bcc4-81b0a04e553d"
+            },
+            "belowFraction": 0.5
+          },
+          "given": [],
+          "then": [
+            {
+              "type": "set-brain-state",
+              "target": {
+                "by": "placement",
+                "key": "937ff624-f2bd-4214-bcc4-81b0a04e553d"
+              },
+              "state": "enraged"
+            },
+            {
+              "type": "set-variable",
+              "variableId": "084b9244-b327-49fa-8545-d3ea0cbd2a31",
+              "op": {
+                "kind": "set",
+                "value": true
+              }
+            }
+          ],
+          "once": true,
+          "enabled": true
+        },
+        {
+          "id": "5564aeac-8a0d-4535-beb0-7c78e04792c0",
+          "when": {
+            "type": "entity-died",
+            "who": {
+              "by": "placement",
+              "key": "937ff624-f2bd-4214-bcc4-81b0a04e553d"
+            }
+          },
+          "given": [],
+          "then": [
+            {
+              "type": "end-session",
+              "outcome": "victory"
+            }
+          ],
+          "once": false,
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "8775ec6b-fdfa-4b19-a357-2fe9a20bc9d3",
+      "name": "Hero",
+      "tags": [
+        "hero"
+      ],
+      "components": {
+        "collider": {
+          "radius": 0.35,
+          "height": 1.6,
+          "solid": true
+        },
+        "movement": {
+          "speed": 4.5,
+          "turnRate": 12,
+          "modes": [
+            "walk"
+          ],
+          "startMode": "walk"
+        },
+        "motion": {
+          "mass": 1,
+          "friction": 12
+        },
+        "health": {
+          "max": 100
+        },
+        "faction": {
+          "factionId": "0379079c-fec2-4459-b14b-aec349e67e8a"
+        },
+        "sight": {
+          "range": 12,
+          "eyeHeight": 1.4
+        },
+        "attacker": {
+          "attackIds": [
+            "0f5cf15b-31f7-4c30-a2a7-6c90cf731713",
+            "6e1d3dd3-2ec5-4a95-bbcf-b190d9b582ec"
+          ]
+        },
+        "dodge": {
+          "distance": 3,
+          "durationMs": 250,
+          "iframeMs": 200,
+          "cooldownMs": 700
+        },
+        "sprite": {
+          "animationSetId": "8d84a877-5526-4ec2-8335-04df890157bc"
+        },
+        "feedback": {
+          "onHurt": "ed952c57-4390-43d3-96b7-49587e8d7551",
+          "onDeath": "be5d1856-8051-421b-ab94-fc179910e3a3"
+        },
+        "playerControlled": {},
+        "persistent": {},
+        "onDeath": {
+          "actions": [
+            {
+              "type": "end-session",
+              "outcome": "defeat"
+            }
+          ],
+          "despawnAfterMs": 1500
+        }
+      }
+    },
+    {
+      "id": "ebbec8c7-cb09-4a06-bf1e-f80cb7f85ac8",
+      "name": "Elder",
+      "tags": [
+        "villager"
+      ],
+      "components": {
+        "collider": {
+          "radius": 0.35,
+          "height": 1.5,
+          "solid": true
+        },
+        "movement": {
+          "speed": 1.2,
+          "turnRate": 12,
+          "modes": [
+            "walk"
+          ],
+          "startMode": "walk"
+        },
+        "faction": {
+          "factionId": "1faac2d8-389b-4269-8a53-d91665c097bf"
+        },
+        "brain": {
+          "brainId": "9d41720a-9f1d-498a-ba1d-a918f8d7195a"
+        },
+        "sprite": {
+          "animationSetId": "65088525-914a-47b2-a38c-cecdff976fa6"
+        },
+        "interactable": {
+          "radius": 1.5,
+          "prompt": "Talk"
+        }
+      }
+    },
+    {
+      "id": "27b482a5-f970-4529-b3a7-0b1cae7dbc71",
+      "name": "Sentry",
+      "tags": [
+        "enemy",
+        "sentry"
+      ],
+      "components": {
+        "collider": {
+          "radius": 0.4,
+          "height": 1.7,
+          "solid": true
+        },
+        "movement": {
+          "speed": 3.4,
+          "turnRate": 12,
+          "modes": [
+            "walk"
+          ],
+          "startMode": "walk"
+        },
+        "motion": {
+          "mass": 1.2,
+          "friction": 12
+        },
+        "health": {
+          "max": 40
+        },
+        "faction": {
+          "factionId": "e6514793-3f64-4ac0-8b18-48ab24526655"
+        },
+        "sight": {
+          "range": 11,
+          "eyeHeight": 1.5
+        },
+        "acquisition": {
+          "range": 11,
+          "forgetMs": 4000
+        },
+        "attacker": {
+          "attackIds": [
+            "69bbec67-6071-4770-89fa-3d757c6f4fb8"
+          ]
+        },
+        "brain": {
+          "brainId": "e2ca7a81-ad82-4d78-8b62-aa1bf65ed2c7"
+        },
+        "sprite": {
+          "animationSetId": "5e0c1bb8-0da9-499e-91a9-b2c86bbe22ef"
+        },
+        "feedback": {
+          "onHurt": "ed952c57-4390-43d3-96b7-49587e8d7551",
+          "onDeath": "be5d1856-8051-421b-ab94-fc179910e3a3"
+        },
+        "onDeath": {
+          "actions": [],
+          "despawnAfterMs": 1200
+        }
+      }
+    },
+    {
+      "id": "197b6b57-a6e9-4032-8823-417e639c09b5",
+      "name": "Ember Warden",
+      "tags": [
+        "enemy",
+        "boss"
+      ],
+      "components": {
+        "collider": {
+          "radius": 0.8,
+          "height": 2.6,
+          "solid": true
+        },
+        "movement": {
+          "speed": 2.4,
+          "turnRate": 12,
+          "modes": [
+            "walk"
+          ],
+          "startMode": "walk"
+        },
+        "motion": {
+          "mass": 6,
+          "friction": 14
+        },
+        "health": {
+          "max": 300
+        },
+        "faction": {
+          "factionId": "e6514793-3f64-4ac0-8b18-48ab24526655"
+        },
+        "sight": {
+          "range": 14,
+          "eyeHeight": 2.2
+        },
+        "acquisition": {
+          "range": 9,
+          "forgetMs": 8000
+        },
+        "attacker": {
+          "attackIds": [
+            "9a544225-3218-413f-bfad-a3d268a50762",
+            "b89158fe-1593-4541-827f-e9b156ddd3c8",
+            "90c71b7a-c683-41a9-8308-6e3fe3b0e4c8",
+            "c92bb482-3731-42f7-875d-c8b7a3d2e70c"
+          ]
+        },
+        "brain": {
+          "brainId": "116a9473-7903-415b-8a28-29d2621b598e"
+        },
+        "sprite": {
+          "animationSetId": "dcaab140-924b-4b41-a9c9-0bfd8cac5dd9",
+          "scale": 1.6
+        },
+        "feedback": {
+          "onHurt": "ed952c57-4390-43d3-96b7-49587e8d7551",
+          "onDeath": "be5d1856-8051-421b-ab94-fc179910e3a3"
+        },
+        "onDeath": {
+          "actions": [],
+          "despawnAfterMs": 2000
+        }
+      }
+    }
+  ],
+  "animationSets": [
+    {
+      "id": "8d84a877-5526-4ec2-8335-04df890157bc",
+      "name": "hero",
+      "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+      "directions": 1,
+      "mirror": false,
+      "clips": {
+        "idle": {
+          "frames": [
+            [
+              "hero/idle/0",
+              "hero/idle/1"
+            ]
+          ],
+          "frameMs": 400,
+          "loop": true
+        },
+        "move": {
+          "frames": [
+            [
+              "hero/move/0",
+              "hero/move/1",
+              "hero/move/2",
+              "hero/move/3"
+            ]
+          ],
+          "frameMs": 120,
+          "loop": true
+        },
+        "dodge": {
+          "frames": [
+            [
+              "hero/dodge/0",
+              "hero/dodge/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "hurt": {
+          "frames": [
+            [
+              "hero/hurt/0"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "death": {
+          "frames": [
+            [
+              "hero/death/0",
+              "hero/death/1",
+              "hero/death/2"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "slash-windup": {
+          "frames": [
+            [
+              "hero/slash-windup/0",
+              "hero/slash-windup/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "slash-active": {
+          "frames": [
+            [
+              "hero/slash-active/0"
+            ]
+          ],
+          "frameMs": 80,
+          "loop": false
+        },
+        "slash-recovery": {
+          "frames": [
+            [
+              "hero/slash-recovery/0",
+              "hero/slash-recovery/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "thrust-windup": {
+          "frames": [
+            [
+              "hero/thrust-windup/0",
+              "hero/thrust-windup/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "thrust-active": {
+          "frames": [
+            [
+              "hero/thrust-active/0"
+            ]
+          ],
+          "frameMs": 80,
+          "loop": false
+        },
+        "thrust-recovery": {
+          "frames": [
+            [
+              "hero/thrust-recovery/0",
+              "hero/thrust-recovery/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        }
+      },
+      "stateClips": {
+        "idle": "idle",
+        "move": "move",
+        "dodge": "dodge",
+        "hurt": "hurt",
+        "death": "death"
+      }
+    },
+    {
+      "id": "65088525-914a-47b2-a38c-cecdff976fa6",
+      "name": "elder",
+      "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+      "directions": 1,
+      "mirror": false,
+      "clips": {
+        "idle": {
+          "frames": [
+            [
+              "elder/idle/0",
+              "elder/idle/1"
+            ]
+          ],
+          "frameMs": 400,
+          "loop": true
+        },
+        "move": {
+          "frames": [
+            [
+              "elder/move/0",
+              "elder/move/1",
+              "elder/move/2",
+              "elder/move/3"
+            ]
+          ],
+          "frameMs": 120,
+          "loop": true
+        },
+        "dodge": {
+          "frames": [
+            [
+              "elder/dodge/0",
+              "elder/dodge/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "hurt": {
+          "frames": [
+            [
+              "elder/hurt/0"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "death": {
+          "frames": [
+            [
+              "elder/death/0",
+              "elder/death/1",
+              "elder/death/2"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        }
+      },
+      "stateClips": {
+        "idle": "idle",
+        "move": "move",
+        "dodge": "dodge",
+        "hurt": "hurt",
+        "death": "death"
+      }
+    },
+    {
+      "id": "5e0c1bb8-0da9-499e-91a9-b2c86bbe22ef",
+      "name": "sentry",
+      "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+      "directions": 1,
+      "mirror": false,
+      "clips": {
+        "idle": {
+          "frames": [
+            [
+              "sentry/idle/0",
+              "sentry/idle/1"
+            ]
+          ],
+          "frameMs": 400,
+          "loop": true
+        },
+        "move": {
+          "frames": [
+            [
+              "sentry/move/0",
+              "sentry/move/1",
+              "sentry/move/2",
+              "sentry/move/3"
+            ]
+          ],
+          "frameMs": 120,
+          "loop": true
+        },
+        "dodge": {
+          "frames": [
+            [
+              "sentry/dodge/0",
+              "sentry/dodge/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "hurt": {
+          "frames": [
+            [
+              "sentry/hurt/0"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "death": {
+          "frames": [
+            [
+              "sentry/death/0",
+              "sentry/death/1",
+              "sentry/death/2"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "stab-windup": {
+          "frames": [
+            [
+              "sentry/stab-windup/0",
+              "sentry/stab-windup/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "stab-active": {
+          "frames": [
+            [
+              "sentry/stab-active/0"
+            ]
+          ],
+          "frameMs": 80,
+          "loop": false
+        },
+        "stab-recovery": {
+          "frames": [
+            [
+              "sentry/stab-recovery/0",
+              "sentry/stab-recovery/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        }
+      },
+      "stateClips": {
+        "idle": "idle",
+        "move": "move",
+        "dodge": "dodge",
+        "hurt": "hurt",
+        "death": "death"
+      }
+    },
+    {
+      "id": "dcaab140-924b-4b41-a9c9-0bfd8cac5dd9",
+      "name": "boss",
+      "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+      "directions": 1,
+      "mirror": false,
+      "clips": {
+        "idle": {
+          "frames": [
+            [
+              "boss/idle/0",
+              "boss/idle/1"
+            ]
+          ],
+          "frameMs": 400,
+          "loop": true
+        },
+        "move": {
+          "frames": [
+            [
+              "boss/move/0",
+              "boss/move/1",
+              "boss/move/2",
+              "boss/move/3"
+            ]
+          ],
+          "frameMs": 120,
+          "loop": true
+        },
+        "dodge": {
+          "frames": [
+            [
+              "boss/dodge/0",
+              "boss/dodge/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "hurt": {
+          "frames": [
+            [
+              "boss/hurt/0"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "death": {
+          "frames": [
+            [
+              "boss/death/0",
+              "boss/death/1",
+              "boss/death/2"
+            ]
+          ],
+          "frameMs": 150,
+          "loop": false
+        },
+        "slam-windup": {
+          "frames": [
+            [
+              "boss/slam-windup/0",
+              "boss/slam-windup/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "slam-active": {
+          "frames": [
+            [
+              "boss/slam-active/0"
+            ]
+          ],
+          "frameMs": 80,
+          "loop": false
+        },
+        "slam-recovery": {
+          "frames": [
+            [
+              "boss/slam-recovery/0",
+              "boss/slam-recovery/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "sweep-windup": {
+          "frames": [
+            [
+              "boss/sweep-windup/0",
+              "boss/sweep-windup/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        },
+        "sweep-active": {
+          "frames": [
+            [
+              "boss/sweep-active/0"
+            ]
+          ],
+          "frameMs": 80,
+          "loop": false
+        },
+        "sweep-recovery": {
+          "frames": [
+            [
+              "boss/sweep-recovery/0",
+              "boss/sweep-recovery/1"
+            ]
+          ],
+          "frameMs": 100,
+          "loop": false
+        }
+      },
+      "stateClips": {
+        "idle": "idle",
+        "move": "move",
+        "dodge": "dodge",
+        "hurt": "hurt",
+        "death": "death"
+      }
+    }
+  ],
+  "attacks": [
+    {
+      "id": "0f5cf15b-31f7-4c30-a2a7-6c90cf731713",
+      "name": "slash",
+      "windupMs": 80,
+      "activeMs": 100,
+      "recoveryMs": 160,
+      "cooldownMs": 0,
+      "hitbox": {
+        "shape": "arc",
+        "range": 1.6,
+        "arcDeg": 110
+      },
+      "verticalReach": 1,
+      "knockback": 2,
+      "hitstopMs": 50,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -10
+        }
+      ],
+      "moveDuring": "slowed",
+      "clips": {
+        "windup": "slash-windup",
+        "active": "slash-active",
+        "recovery": "slash-recovery"
+      },
+      "feedback": {
+        "hit": "ec9cccd3-34c7-4c52-9c97-3c1f7521c7d1"
+      }
+    },
+    {
+      "id": "6e1d3dd3-2ec5-4a95-bbcf-b190d9b582ec",
+      "name": "thrust",
+      "windupMs": 260,
+      "activeMs": 120,
+      "recoveryMs": 300,
+      "cooldownMs": 600,
+      "hitbox": {
+        "shape": "line",
+        "length": 2.6,
+        "width": 0.7
+      },
+      "verticalReach": 1,
+      "knockback": 5,
+      "hitstopMs": 90,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -24
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "thrust-windup",
+        "active": "thrust-active",
+        "recovery": "thrust-recovery"
+      },
+      "feedback": {
+        "hit": "0e9a8975-55e7-4494-a055-7eb48ad84d2b"
+      }
+    },
+    {
+      "id": "69bbec67-6071-4770-89fa-3d757c6f4fb8",
+      "name": "stab",
+      "windupMs": 350,
+      "activeMs": 100,
+      "recoveryMs": 350,
+      "cooldownMs": 900,
+      "hitbox": {
+        "shape": "arc",
+        "range": 1.5,
+        "arcDeg": 70
+      },
+      "verticalReach": 1,
+      "knockback": 2,
+      "hitstopMs": 50,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -8
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "stab-windup",
+        "active": "stab-active",
+        "recovery": "stab-recovery"
+      },
+      "feedback": {
+        "windup": "241f6e37-5b28-4712-881d-26acd8e7832d",
+        "hit": "ec9cccd3-34c7-4c52-9c97-3c1f7521c7d1"
+      },
+      "aiRange": 1.3
+    },
+    {
+      "id": "9a544225-3218-413f-bfad-a3d268a50762",
+      "name": "slam",
+      "windupMs": 900,
+      "activeMs": 120,
+      "recoveryMs": 600,
+      "cooldownMs": 2500,
+      "hitbox": {
+        "shape": "circle",
+        "radius": 2.2,
+        "offset": 1.5
+      },
+      "verticalReach": 1.5,
+      "knockback": 9,
+      "hitstopMs": 120,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -30
+        },
+        {
+          "type": "apply-effect",
+          "target": {
+            "by": "other"
+          },
+          "statusId": "b7ccd8e2-a598-4df5-88f7-77724e5e10cf"
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "slam-windup",
+        "active": "slam-active",
+        "recovery": "slam-recovery"
+      },
+      "feedback": {
+        "windup": "241f6e37-5b28-4712-881d-26acd8e7832d",
+        "hit": "0e9a8975-55e7-4494-a055-7eb48ad84d2b"
+      },
+      "aiRange": 3
+    },
+    {
+      "id": "b89158fe-1593-4541-827f-e9b156ddd3c8",
+      "name": "sweep",
+      "windupMs": 450,
+      "activeMs": 150,
+      "recoveryMs": 400,
+      "cooldownMs": 1500,
+      "hitbox": {
+        "shape": "arc",
+        "range": 2.4,
+        "arcDeg": 180
+      },
+      "verticalReach": 1.5,
+      "knockback": 4,
+      "hitstopMs": 70,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -16
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "sweep-windup",
+        "active": "sweep-active",
+        "recovery": "sweep-recovery"
+      },
+      "feedback": {
+        "windup": "241f6e37-5b28-4712-881d-26acd8e7832d",
+        "hit": "ec9cccd3-34c7-4c52-9c97-3c1f7521c7d1"
+      },
+      "aiRange": 2.2
+    },
+    {
+      "id": "90c71b7a-c683-41a9-8308-6e3fe3b0e4c8",
+      "name": "enraged-slam",
+      "windupMs": 700,
+      "activeMs": 120,
+      "recoveryMs": 450,
+      "cooldownMs": 1200,
+      "hitbox": {
+        "shape": "circle",
+        "radius": 2.4,
+        "offset": 1.5
+      },
+      "verticalReach": 1.5,
+      "knockback": 10,
+      "hitstopMs": 120,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -34
+        },
+        {
+          "type": "apply-effect",
+          "target": {
+            "by": "other"
+          },
+          "statusId": "b7ccd8e2-a598-4df5-88f7-77724e5e10cf"
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "slam-windup",
+        "active": "slam-active",
+        "recovery": "slam-recovery"
+      },
+      "feedback": {
+        "windup": "241f6e37-5b28-4712-881d-26acd8e7832d",
+        "hit": "0e9a8975-55e7-4494-a055-7eb48ad84d2b"
+      },
+      "aiRange": 3
+    },
+    {
+      "id": "c92bb482-3731-42f7-875d-c8b7a3d2e70c",
+      "name": "enraged-sweep",
+      "windupMs": 350,
+      "activeMs": 150,
+      "recoveryMs": 300,
+      "cooldownMs": 700,
+      "hitbox": {
+        "shape": "arc",
+        "range": 2.4,
+        "arcDeg": 200
+      },
+      "verticalReach": 1.5,
+      "knockback": 4,
+      "hitstopMs": 70,
+      "onHit": [
+        {
+          "type": "modify-health",
+          "target": {
+            "by": "other"
+          },
+          "delta": -18
+        }
+      ],
+      "moveDuring": "rooted",
+      "clips": {
+        "windup": "sweep-windup",
+        "active": "sweep-active",
+        "recovery": "sweep-recovery"
+      },
+      "feedback": {
+        "windup": "241f6e37-5b28-4712-881d-26acd8e7832d",
+        "hit": "ec9cccd3-34c7-4c52-9c97-3c1f7521c7d1"
+      },
+      "aiRange": 2.2
+    }
+  ],
+  "brains": [
+    {
+      "id": "e2ca7a81-ad82-4d78-8b62-aa1bf65ed2c7",
+      "name": "sentry",
+      "initial": "guard",
+      "states": [
+        {
+          "id": "guard",
+          "behavior": {
+            "kind": "idle"
+          },
+          "transitions": [
+            {
+              "to": "chase",
+              "when": [
+                {
+                  "type": "has-target"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "chase",
+          "behavior": {
+            "kind": "chase"
+          },
+          "transitions": [
+            {
+              "to": "return",
+              "when": [
+                {
+                  "type": "away-from-home",
+                  "distance": 16
+                }
+              ]
+            },
+            {
+              "to": "return",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "has-target"
+                  }
+                }
+              ]
+            },
+            {
+              "to": "fight",
+              "when": [
+                {
+                  "type": "target-within",
+                  "distance": 1.3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fight",
+          "behavior": {
+            "kind": "attack",
+            "attackIds": [
+              "69bbec67-6071-4770-89fa-3d757c6f4fb8"
+            ],
+            "pick": "sequence"
+          },
+          "transitions": [
+            {
+              "to": "return",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "has-target"
+                  }
+                }
+              ]
+            },
+            {
+              "to": "chase",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "target-within",
+                    "distance": 1.8
+                  }
+                }
+              ],
+              "afterMs": 300
+            }
+          ]
+        },
+        {
+          "id": "return",
+          "behavior": {
+            "kind": "return-home"
+          },
+          "transitions": [
+            {
+              "to": "guard",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "away-from-home",
+                    "distance": 0.5
+                  }
+                }
+              ]
+            },
+            {
+              "to": "chase",
+              "when": [
+                {
+                  "type": "has-target"
+                },
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "away-from-home",
+                    "distance": 12
+                  }
+                }
+              ],
+              "afterMs": 1500
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "116a9473-7903-415b-8a28-29d2621b598e",
+      "name": "boss",
+      "initial": "rest",
+      "states": [
+        {
+          "id": "rest",
+          "behavior": {
+            "kind": "idle"
+          },
+          "transitions": [
+            {
+              "to": "hunt",
+              "when": [
+                {
+                  "type": "has-target"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hunt",
+          "behavior": {
+            "kind": "chase"
+          },
+          "transitions": [
+            {
+              "to": "fight",
+              "when": [
+                {
+                  "type": "target-within",
+                  "distance": 2.6
+                }
+              ]
+            },
+            {
+              "to": "rest",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "has-target"
+                  }
+                }
+              ],
+              "afterMs": 2000
+            }
+          ]
+        },
+        {
+          "id": "fight",
+          "behavior": {
+            "kind": "attack",
+            "attackIds": [
+              "9a544225-3218-413f-bfad-a3d268a50762",
+              "b89158fe-1593-4541-827f-e9b156ddd3c8"
+            ],
+            "pick": "sequence"
+          },
+          "transitions": [
+            {
+              "to": "hunt",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "target-within",
+                    "distance": 3.2
+                  }
+                }
+              ],
+              "afterMs": 400
+            }
+          ]
+        },
+        {
+          "id": "enraged",
+          "behavior": {
+            "kind": "idle"
+          },
+          "onEnter": [
+            {
+              "type": "show-message",
+              "text": "The warden roars!",
+              "ms": 2000
+            }
+          ],
+          "transitions": [
+            {
+              "to": "rage-hunt",
+              "when": [],
+              "afterMs": 300
+            }
+          ]
+        },
+        {
+          "id": "rage-hunt",
+          "behavior": {
+            "kind": "chase"
+          },
+          "transitions": [
+            {
+              "to": "rage-fight",
+              "when": [
+                {
+                  "type": "target-within",
+                  "distance": 2.6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rage-fight",
+          "behavior": {
+            "kind": "attack",
+            "attackIds": [
+              "90c71b7a-c683-41a9-8308-6e3fe3b0e4c8",
+              "c92bb482-3731-42f7-875d-c8b7a3d2e70c"
+            ],
+            "pick": "random"
+          },
+          "transitions": [
+            {
+              "to": "rage-hunt",
+              "when": [
+                {
+                  "type": "not",
+                  "of": {
+                    "type": "target-within",
+                    "distance": 3.2
+                  }
+                }
+              ],
+              "afterMs": 400
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9d41720a-9f1d-498a-ba1d-a918f8d7195a",
+      "name": "villager",
+      "initial": "stand",
+      "states": [
+        {
+          "id": "stand",
+          "behavior": {
+            "kind": "idle"
+          },
+          "transitions": [
+            {
+              "to": "stroll",
+              "when": [
+                {
+                  "type": "chance",
+                  "probability": 0.5
+                }
+              ],
+              "afterMs": 2000
+            }
+          ]
+        },
+        {
+          "id": "stroll",
+          "behavior": {
+            "kind": "wander",
+            "radius": 2
+          },
+          "transitions": [
+            {
+              "to": "stand",
+              "when": [],
+              "afterMs": 3000
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "statusEffects": [
+    {
+      "id": "b7ccd8e2-a598-4df5-88f7-77724e5e10cf",
+      "name": "stunned",
+      "duration": {
+        "kind": "ms",
+        "value": 600
+      },
+      "stackMode": "refresh",
+      "stackScope": "global",
+      "restricts": [
+        "move",
+        "attack",
+        "dodge"
+      ]
+    },
+    {
+      "id": "3a032c15-0c9c-4d67-941d-3421a4fcf464",
+      "name": "burning",
+      "duration": {
+        "kind": "ms",
+        "value": 3000
+      },
+      "stackMode": "stack",
+      "maxStacks": 3,
+      "stackScope": "global",
+      "periodic": {
+        "interval": {
+          "kind": "ms",
+          "value": 500
+        },
+        "actions": [
+          {
+            "type": "modify-health",
+            "target": {
+              "by": "subject"
+            },
+            "delta": -1
+          }
+        ]
+      }
+    },
+    {
+      "id": "89f0f656-4d8b-432a-ac3f-86843b946193",
+      "name": "warded",
+      "duration": {
+        "kind": "turns",
+        "value": 1
+      },
+      "stackMode": "ignore",
+      "stackScope": "global",
+      "flags": [
+        "invulnerable"
+      ]
+    }
+  ],
+  "feedback": [
+    {
+      "id": "ec9cccd3-34c7-4c52-9c97-3c1f7521c7d1",
+      "name": "hit",
+      "flash": {
+        "color": "#ffffff",
+        "ms": 80
+      },
+      "shake": {
+        "amplitude": 0.08,
+        "ms": 120
+      },
+      "particles": {
+        "presetId": "464d216e-fa29-4567-b20f-63c00061d481",
+        "count": 6
+      }
+    },
+    {
+      "id": "0e9a8975-55e7-4494-a055-7eb48ad84d2b",
+      "name": "heavy hit",
+      "flash": {
+        "color": "#ffd27f",
+        "ms": 120
+      },
+      "shake": {
+        "amplitude": 0.3,
+        "ms": 260
+      },
+      "particles": {
+        "presetId": "464d216e-fa29-4567-b20f-63c00061d481",
+        "count": 14
+      }
+    },
+    {
+      "id": "241f6e37-5b28-4712-881d-26acd8e7832d",
+      "name": "telegraph",
+      "groundIndicator": {
+        "ms": 900
+      }
+    },
+    {
+      "id": "ed952c57-4390-43d3-96b7-49587e8d7551",
+      "name": "hurt",
+      "flash": {
+        "color": "#ff4040",
+        "ms": 100
+      }
+    },
+    {
+      "id": "be5d1856-8051-421b-ab94-fc179910e3a3",
+      "name": "death",
+      "flash": {
+        "color": "#202020",
+        "ms": 200
+      },
+      "shake": {
+        "amplitude": 0.15,
+        "ms": 200
+      },
+      "particles": {
+        "presetId": "464d216e-fa29-4567-b20f-63c00061d481",
+        "count": 20
+      }
+    }
+  ],
+  "particlePresets": [
+    {
+      "id": "464d216e-fa29-4567-b20f-63c00061d481",
+      "frame": {
+        "atlasId": "ab521110-aa0a-42e7-93bf-813741295b09",
+        "frame": "fx/spark"
+      },
+      "lifetimeMs": 350,
+      "speed": [
+        1,
+        4
+      ],
+      "spreadDeg": 360,
+      "gravity": 6,
+      "scale": [
+        0.2,
+        0.5
+      ],
+      "fadeOut": true
+    }
+  ],
+  "factions": [
+    {
+      "id": "0379079c-fec2-4459-b14b-aec349e67e8a",
+      "name": "player",
+      "relations": {
+        "e6514793-3f64-4ac0-8b18-48ab24526655": "hostile"
+      }
+    },
+    {
+      "id": "e6514793-3f64-4ac0-8b18-48ab24526655",
+      "name": "hostile",
+      "relations": {
+        "0379079c-fec2-4459-b14b-aec349e67e8a": "hostile"
+      }
+    },
+    {
+      "id": "1faac2d8-389b-4269-8a53-d91665c097bf",
+      "name": "neutral",
+      "relations": {}
+    }
+  ],
+  "variables": [
+    {
+      "id": "11d17a17-17ad-4ea7-879b-552556a1ced2",
+      "key": "talked_to_elder",
+      "name": "talked to elder",
+      "type": "bool",
+      "initial": false,
+      "scope": "save",
+      "readonly": false
+    },
+    {
+      "id": "084b9244-b327-49fa-8545-d3ea0cbd2a31",
+      "key": "boss_enraged",
+      "name": "boss enraged",
+      "type": "bool",
+      "initial": false,
+      "scope": "save",
+      "readonly": false
+    },
+    {
+      "id": "3946b6fd-633f-40f8-859b-dff6902ea169",
+      "key": "ember_pulses",
+      "name": "ember pulses",
+      "type": "number",
+      "initial": 0,
+      "scope": "save",
+      "readonly": false
+    },
+    {
+      "id": "6c8627c1-979c-4a1e-81b1-950f96efb43d",
+      "key": "lucky_pulses",
+      "name": "lucky pulses",
+      "type": "number",
+      "initial": 0,
+      "scope": "save",
+      "readonly": false
+    },
+    {
+      "id": "be2b9347-d0a8-4696-896c-0ef9a3779b1c",
+      "key": "arena_visits",
+      "name": "arena visits",
+      "type": "number",
+      "initial": 0,
+      "scope": "session",
+      "readonly": false
+    },
+    {
+      "id": "266bf3ec-7eff-44a2-b74d-c5fe091bc577",
+      "key": "elder_greeting",
+      "name": "elder greeting",
+      "type": "string",
+      "initial": "The plateau sentry sees further than you think.",
+      "scope": "save",
+      "readonly": true
+    }
+  ],
+  "inputActions": [
+    {
+      "id": "22b8535a-b624-4cac-b11a-6fee3fffcc89",
+      "name": "Move",
+      "kind": "axis2",
+      "role": "move",
+      "defaultBindings": [
+        "KeyW",
+        "KeyA",
+        "KeyS",
+        "KeyD"
+      ]
+    },
+    {
+      "id": "81eaf93b-bb22-4aad-9a8f-383ee03c392d",
+      "name": "Aim",
+      "kind": "pointer",
+      "role": "aim",
+      "defaultBindings": [
+        "Pointer"
+      ]
+    },
+    {
+      "id": "28a2b279-3402-4e4e-a901-32677011c08b",
+      "name": "Click",
+      "kind": "button",
+      "role": "click",
+      "defaultBindings": [
+        "Mouse0"
+      ]
+    },
+    {
+      "id": "839487a5-c308-47b7-90bf-ba2a7a6834eb",
+      "name": "Attack",
+      "kind": "button",
+      "role": "attack-primary",
+      "defaultBindings": [
+        "KeyJ"
+      ]
+    },
+    {
+      "id": "0aca9c7c-eb2c-4b89-b374-fc5e099e8202",
+      "name": "Heavy attack",
+      "kind": "button",
+      "role": "attack-secondary",
+      "defaultBindings": [
+        "Mouse2",
+        "KeyK"
+      ]
+    },
+    {
+      "id": "93189a4f-ca6d-496d-88b1-20ce767d79a5",
+      "name": "Dodge",
+      "kind": "button",
+      "role": "dodge",
+      "defaultBindings": [
+        "Space"
+      ]
+    },
+    {
+      "id": "64cde409-18ea-4b81-a4c6-0669c77463dc",
+      "name": "Interact",
+      "kind": "button",
+      "role": "interact",
+      "defaultBindings": [
+        "KeyE"
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "id": "4189ccc0-cfbe-4641-822a-dd99310afedf",
+      "when": {
+        "type": "map-loaded"
+      },
+      "given": [],
+      "then": [
+        {
+          "type": "start-timer",
+          "timerId": "ember-pulse",
+          "ms": 1000,
+          "repeat": true
+        }
+      ],
+      "once": false,
+      "enabled": true
+    },
+    {
+      "id": "a29f148f-39c9-4f39-8fd2-06c2eb1021e3",
+      "when": {
+        "type": "timer-fired",
+        "timerId": "ember-pulse"
+      },
+      "given": [],
+      "then": [
+        {
+          "type": "set-variable",
+          "variableId": "3946b6fd-633f-40f8-859b-dff6902ea169",
+          "op": {
+            "kind": "add",
+            "value": 1
+          }
+        }
+      ],
+      "once": false,
+      "enabled": true
+    },
+    {
+      "id": "a72a836b-2c36-48fd-8aaf-a3618a6c2f98",
+      "when": {
+        "type": "variable-changed",
+        "variableId": "3946b6fd-633f-40f8-859b-dff6902ea169"
+      },
+      "given": [
+        {
+          "type": "chance",
+          "probability": 0.35
+        }
+      ],
+      "then": [
+        {
+          "type": "set-variable",
+          "variableId": "6c8627c1-979c-4a1e-81b1-950f96efb43d",
+          "op": {
+            "kind": "add",
+            "value": 1
+          }
+        }
+      ],
+      "once": false,
+      "enabled": true
+    }
+  ]
+}
