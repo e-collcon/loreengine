@@ -9,12 +9,16 @@ import type { ComponentData, MovementMode, Project, VariableValue } from '@loree
 import type { DiagnosticEntry } from './diagnostics.ts';
 import type { EntityId } from './entities.ts';
 import type { PresentationEvent } from './presentation.ts';
+import type { ClickAction } from './orders.ts';
+import type { CastOptions, CastResult, Vec3 } from './sight.ts';
 import type { ClockMode, Outcome } from './sim.ts';
 
 export type { EntityId } from './entities.ts';
 export type { PresentationEvent, PresentationKind } from './presentation.ts';
 export type { DiagnosticEntry } from './diagnostics.ts';
 export type { ClockMode, Outcome } from './sim.ts';
+export type { ClickAction } from './orders.ts';
+export type { CastOptions, CastResult, Vec3 } from './sight.ts';
 export { NO_ENTITY, MAX_ENTITIES } from './entities.ts';
 export { PRESENTATION_KINDS } from './presentation.ts';
 export { TICK_HZ, MS_PER_TICK, SECONDS_PER_TICK } from './time.ts';
@@ -45,6 +49,12 @@ export interface EntityView {
   /** The entity's effective authored components. */
   data(index: number): Readonly<ComponentData>;
   placementKey(index: number): string;
+  /** The id of the brain state the entity is in, or '' without a brain. */
+  brainState(index: number): string;
+  /** The entity's acquired target, or NO_ENTITY. */
+  target(index: number): EntityId;
+  /** Waypoints left on the entity's path, as (x, y) pairs written into `out`; returns how many. */
+  path(index: number, out: Float64Array): number;
 }
 
 /** The loaded map's elevation model (spec 6.3): the same queries the simulation uses. */
@@ -108,6 +118,16 @@ export interface RuntimeView {
   readonly presentation: PresentationView;
   readonly diagnostics: DiagnosticsView;
   variable(id: string): VariableValue | undefined;
+  /**
+   * What a click by the player on this entity would do (spec 7.9b). The
+   * client calls it on hover to choose the cursor, so the cursor always
+   * tells the truth about the click.
+   */
+  clickAction(entity: EntityId): ClickAction;
+  /** The one 3D segment cast (spec 7.6), for debug overlays. */
+  castSegment(from: Vec3, to: Vec3, opts: CastOptions): CastResult;
+  /** Can entity `a` see entity `b`, by range, line of sight, and the high-ground rule? */
+  canSee(a: EntityId, b: EntityId): boolean;
   stats(): RuntimeStats;
   /** Hash of everything a save would hold (minus its timestamp): the determinism tests compare these. */
   stateHash(): string;

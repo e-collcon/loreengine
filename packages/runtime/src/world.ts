@@ -16,7 +16,7 @@
  * cliff, including every sloped (ramp side) edge; see DECISIONS_LOG N6 for
  * why a "wide ramp" cannot connect sideways on a hex grid.
  */
-import { cellCenterX, cellCenterY, dirUnitX, dirUnitY, neighborIndex, oppositeDir, worldToCellIndex } from '@loreengine/hexmath';
+import { cellCenterX, cellCenterY, cornerOffsetX, cornerOffsetY, dirUnitX, dirUnitY, edgeCornerA, edgeCornerB, neighborIndex, oppositeDir, worldToCellIndex } from '@loreengine/hexmath';
 import type { HexDir } from '@loreengine/hexmath';
 import type { MapDef, MovementMode, Project } from '@loreengine/schema';
 
@@ -78,6 +78,16 @@ export class World {
   readonly link: Uint8Array;
   /** Index into `project.terrains`, per cell. */
   readonly terrainDef: Uint16Array;
+  /**
+   * Offsets from a cell's center to the two ends of its edge facing each
+   * direction (index dir - 1): the blocked-edge segments collision tests.
+   */
+  readonly edgeAX = new Float64Array(6);
+  readonly edgeAY = new Float64Array(6);
+  readonly edgeBX = new Float64Array(6);
+  readonly edgeBY = new Float64Array(6);
+  /** Distance from a hex center to the middle of an edge. */
+  readonly apothem: number;
 
   constructor(project: Project, def: MapDef) {
     this.width = def.width;
@@ -88,6 +98,14 @@ export class World {
     this.level = def.layers.level;
     this.ramp = def.layers.ramp;
     this.terrain = def.layers.terrain;
+
+    this.apothem = (SQRT3 / 2) * this.hexSize;
+    for (let dir = 1; dir <= 6; dir++) {
+      this.edgeAX[dir - 1] = cornerOffsetX(edgeCornerA(dir as HexDir), this.hexSize);
+      this.edgeAY[dir - 1] = cornerOffsetY(edgeCornerA(dir as HexDir), this.hexSize);
+      this.edgeBX[dir - 1] = cornerOffsetX(edgeCornerB(dir as HexDir), this.hexSize);
+      this.edgeBY[dir - 1] = cornerOffsetY(edgeCornerB(dir as HexDir), this.hexSize);
+    }
 
     const terrainIndex = new Map<string, number>();
     project.terrains.forEach((t, i) => terrainIndex.set(t.id, i));

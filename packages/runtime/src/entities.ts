@@ -30,6 +30,26 @@ export const F_DEAD = 1 << 6; //        health reached zero; still present until
 export const F_SPAWNED = 1 << 7; //     created at runtime, not by a placement
 export const F_DESPAWNING = 1 << 8; //  despawn requested; removed at the end of the tick
 
+/** Up to 64 waypoints of (x, y) per entity (spec 9.2). */
+export const MAX_WAYPOINTS = 64;
+export const WAYPOINT_STRIDE = MAX_WAYPOINTS * 2;
+
+/** What active effects forbid (spec 7.10). */
+export const RESTRICT_MOVE = 1 << 0;
+export const RESTRICT_ATTACK = 1 << 1;
+export const RESTRICT_DODGE = 1 << 2;
+export const RESTRICT_ACT = 1 << 3;
+/** What active effects grant. */
+export const STATUS_INVULNERABLE = 1 << 0;
+export const STATUS_UNTARGETABLE = 1 << 1;
+
+/** Click orders (spec 7.9b). */
+export const ORDER_NONE = 0;
+export const ORDER_MOVE = 1; //     walk to a ground point
+export const ORDER_ATTACK = 2; //   path into range of a hostile, face it, swing
+export const ORDER_USE = 3; //      path into an interactable's radius and raise `interacted`
+export const ORDER_APPROACH = 4; // move next to any other entity
+
 const EMPTY: ComponentData = {};
 
 export function indexOfId(id: EntityId): number {
@@ -65,6 +85,65 @@ export class EntityStore {
   // HealthState.
   readonly hp = new Float64Array(MAX_ENTITIES);
   readonly hpMax = new Float64Array(MAX_ENTITIES);
+
+  // Movement. `mode` is a MODE_* bit; the intent is this tick's desired velocity, consumed by movement.
+  readonly mode = new Uint8Array(MAX_ENTITIES);
+  readonly intentX = new Float64Array(MAX_ENTITIES);
+  readonly intentY = new Float64Array(MAX_ENTITIES);
+  /** Where to face: 0 along movement, 1 toward (aimX, aimY). */
+  readonly aiming = new Uint8Array(MAX_ENTITIES);
+  readonly aimX = new Float64Array(MAX_ENTITIES);
+  readonly aimY = new Float64Array(MAX_ENTITIES);
+  /** The cell the entity was on after the last movement step, or -1: region events compare against it. */
+  readonly lastCell = new Int32Array(MAX_ENTITIES).fill(-1);
+
+  // MotionState: knockback velocity and hitstop.
+  readonly vx = new Float64Array(MAX_ENTITIES);
+  readonly vy = new Float64Array(MAX_ENTITIES);
+  readonly hitstop = new Int32Array(MAX_ENTITIES);
+  /** Bits of what active effects forbid (RESTRICT_*), and what they grant (STATUS_*). */
+  readonly restrict = new Uint8Array(MAX_ENTITIES);
+  readonly status = new Uint8Array(MAX_ENTITIES);
+  /** 1 while a scripted jump carries the entity: movement leaves it alone and input is ignored. */
+  readonly airborne = new Uint8Array(MAX_ENTITIES);
+  /** Movement speed factor for this tick: 1, 0.4 while an attack is `slowed`, 0 while `rooted`. */
+  readonly speedScale = new Float64Array(MAX_ENTITIES).fill(1);
+
+  // PathState: up to 64 waypoints of (x, y).
+  readonly waypoints = new Float64Array(MAX_ENTITIES * WAYPOINT_STRIDE);
+  readonly pathCount = new Uint8Array(MAX_ENTITIES);
+  readonly pathIndex = new Uint8Array(MAX_ENTITIES);
+  /** 1 while the entity wants to reach (goalX, goalY). */
+  readonly hasGoal = new Uint8Array(MAX_ENTITIES);
+  readonly goalX = new Float64Array(MAX_ENTITIES);
+  readonly goalY = new Float64Array(MAX_ENTITIES);
+  /** Sequence number of a queued path request, or -1. */
+  readonly pathPending = new Float64Array(MAX_ENTITIES).fill(-1);
+  /** Tick before which no new path is requested (a failed search retries after 0.5 s). */
+  readonly repathAt = new Float64Array(MAX_ENTITIES);
+  /** Consecutive ticks of following a path without getting anywhere. */
+  readonly blockedTicks = new Int32Array(MAX_ENTITIES);
+
+  // Acquisition: the current target and when it was last seen.
+  readonly target = new Float64Array(MAX_ENTITIES).fill(-1);
+  readonly lastSeen = new Float64Array(MAX_ENTITIES);
+
+  // BrainState.
+  /** Index into the compiled brains, or -1. */
+  readonly brain = new Int32Array(MAX_ENTITIES).fill(-1);
+  readonly brainState = new Int32Array(MAX_ENTITIES);
+  readonly brainEntered = new Float64Array(MAX_ENTITIES);
+  readonly homeX = new Float64Array(MAX_ENTITIES);
+  readonly homeY = new Float64Array(MAX_ENTITIES);
+  readonly patrolIndex = new Int32Array(MAX_ENTITIES);
+  /** Tick at which a wandering brain picks its next point. */
+  readonly wanderAt = new Float64Array(MAX_ENTITIES);
+
+  // The player's click order (spec 7.9b): ORDER_* kind, its target entity, and its ground point.
+  readonly orderKind = new Uint8Array(MAX_ENTITIES);
+  readonly orderTarget = new Float64Array(MAX_ENTITIES).fill(-1);
+  readonly orderX = new Float64Array(MAX_ENTITIES);
+  readonly orderY = new Float64Array(MAX_ENTITIES);
 
   private readonly byPlacement = new Map<string, number>();
   private readonly pending = new Int32Array(MAX_ENTITIES);
@@ -156,6 +235,36 @@ export class EntityStore {
     const max = data.health ? data.health.max : 0;
     this.hp[index] = max;
     this.hpMax[index] = max;
+    // A slot is reused: every piece of runtime-only state starts clean.
+    this.mode[index] = 0;
+    this.intentX[index] = this.intentY[index] = 0;
+    this.aiming[index] = 0;
+    this.aimX[index] = this.aimY[index] = 0;
+    this.lastCell[index] = -1;
+    this.vx[index] = this.vy[index] = 0;
+    this.hitstop[index] = 0;
+    this.restrict[index] = 0;
+    this.status[index] = 0;
+    this.speedScale[index] = 1;
+    this.airborne[index] = 0;
+    this.pathCount[index] = this.pathIndex[index] = 0;
+    this.hasGoal[index] = 0;
+    this.goalX[index] = this.goalY[index] = 0;
+    this.pathPending[index] = -1;
+    this.repathAt[index] = 0;
+    this.blockedTicks[index] = 0;
+    this.target[index] = NO_ENTITY;
+    this.lastSeen[index] = 0;
+    this.brain[index] = -1;
+    this.brainState[index] = 0;
+    this.brainEntered[index] = 0;
+    this.homeX[index] = x;
+    this.homeY[index] = y;
+    this.patrolIndex[index] = 0;
+    this.wanderAt[index] = 0;
+    this.orderKind[index] = 0;
+    this.orderTarget[index] = NO_ENTITY;
+    this.orderX[index] = this.orderY[index] = 0;
     return this.generation[index]! * 65536 + index;
   }
 

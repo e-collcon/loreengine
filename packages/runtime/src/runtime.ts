@@ -6,7 +6,8 @@
  */
 import { checkProject } from '@loreengine/schema';
 import type { Project, SaveKind, SaveState } from '@loreengine/schema';
-import { F_DEAD } from './entities.ts';
+import { F_DEAD, WAYPOINT_STRIDE } from './entities.ts';
+import { clickAction } from './orders.ts';
 import { hashText } from './hash.ts';
 import { quantizeInput } from './input.ts';
 import type { InputFrame } from './input.ts';
@@ -124,6 +125,15 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
       archetype: (i) => e.archetype[i]!,
       data: (i) => e.data[i]!,
       placementKey: (i) => e.placementKey[i]!,
+      brainState: (i) => sim.brains.stateOf(i),
+      target: (i) => e.target[i]!,
+      path: (i, out) => {
+        const left = e.pathCount[i]! - e.pathIndex[i]!;
+        const n = Math.max(0, Math.min(left, out.length >> 1));
+        const base = i * WAYPOINT_STRIDE + e.pathIndex[i]! * 2;
+        for (let k = 0; k < n * 2; k++) out[k] = e.waypoints[base + k]!;
+        return n;
+      },
     },
     presentation: {
       get end() {
@@ -159,6 +169,13 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
       heightIn: (cell, x, y) => (sim.world ? sim.world.surfaceHeightIn(cell, x, y) : 0),
     },
     variable: (id) => sim.variables.get(id),
+    clickAction: (entity) => clickAction(sim, sim.playerIndex(), e.indexOf(entity)),
+    castSegment: (from, to, opts) => sim.sight.castSegment(from, to, opts),
+    canSee: (a, b) => {
+      const ia = e.indexOf(a);
+      const ib = e.indexOf(b);
+      return ia >= 0 && ib >= 0 && sim.sight.canSee(ia, ib);
+    },
     stats: () => ({ entities: e.count, subscriptions: sim.bus.subscriptionCount, timers: sim.timers.count, queuedEvents: sim.bus.queued }),
     stateHash: () => {
       const state = sim.snapshot(EPOCH, 'playtest');

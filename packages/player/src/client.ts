@@ -8,13 +8,17 @@
 import { PixiRenderer, followCamera } from '@loreengine/render';
 import type { TerrainPick } from '@loreengine/render';
 import { MS_PER_TICK, ROLE_BITS, createRuntime } from '@loreengine/runtime';
-import type { ClickOrder, Runtime } from '@loreengine/runtime';
+import type { ClickAction, ClickOrder, Runtime } from '@loreengine/runtime';
 import type { Project, SaveState } from '@loreengine/schema';
 import { InputMapper, mouseCode } from './input.ts';
 
 export const MAX_TICKS_PER_FRAME = 5;
 /** World units the player may drift from the screen center before the camera follows. */
 export const CAMERA_DEADZONE = 1.5;
+/** Holding the click button re-issues a ground order this often. */
+export const REISSUE_TICKS = 6;
+/** Placeholder cursors until chunk 7's cursor art: sword, hand, arrow. */
+const CURSORS: Record<ClickAction, string> = { attack: 'crosshair', use: 'pointer', 'move-to': 'cell', none: 'default' };
 
 export interface ClientOptions {
   host: HTMLElement;
@@ -37,6 +41,8 @@ export interface Client {
   readonly hover: TerrainPick | null;
   /** The last terrain the player clicked, or null. */
   readonly lastPick: TerrainPick | null;
+  /** Index of the entity under the cursor, or -1. */
+  readonly hoverEntity: number;
   follow: boolean;
   paused: boolean;
   /** Frames rendered and ticks simulated so far. */
@@ -64,7 +70,10 @@ export async function startClient(options: ClientOptions): Promise<Client> {
   if (options.zoom !== undefined) renderer.setZoom(options.zoom);
   const input = new InputMapper(project.inputActions);
 
+  let heldOnGround = false;
+  let heldTicks = 0;
   let hover: TerrainPick | null = null;
+  let hoverEntity = -1;
   let lastPick: TerrainPick | null = null;
   let frames = 0;
   let stopped = false;
@@ -87,6 +96,10 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     const [sx, sy] = pointerAt(event);
     hover = renderer.pickTerrain(sx, sy, scratch) ? { ...scratch } : null;
     input.setPointer(hover ? { x: hover.x, y: hover.y } : null);
+    // One resolver for click and hover: the cursor says what the click would do (spec 7.9b).
+    hoverEntity = renderer.pickEntity(sx, sy);
+    const action = hoverEntity >= 0 ? view.clickAction(view.entities.id(hoverEntity)) : 'none';
+    canvas.style.cursor = CURSORS[action];
   };
   /** Entities first, front-most in draw order; then the height-aware terrain pick (spec 7.9b). */
   const orderAt = (event: MouseEvent): ClickOrder | null => {
@@ -108,7 +121,12 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     updateHover(event);
     const code = mouseCode(event.button);
     input.press(code);
-    if (project.inputActions.some((a) => a.role === 'click' && a.defaultBindings.includes(code))) input.setOrder(orderAt(event));
+    if (project.inputActions.some((a) => a.role === 'click' && a.defaultBindings.includes(code))) {
+      const order = orderAt(event);
+      input.setOrder(order);
+      heldOnGround = order !== null && order.kind === 'ground';
+      heldTicks = 0;
+    }
   };
   const onMouseUp = (event: MouseEvent): void => input.release(mouseCode(event.button));
   const onWheel = (event: WheelEvent): void => {
@@ -142,6 +160,9 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     },
     get lastPick() {
       return lastPick;
+    },
+    get hoverEntity() {
+      return hoverEntity;
     },
     follow: options.follow ?? true,
     paused: false,
@@ -177,9 +198,13 @@ export async function startClient(options: ClientOptions): Promise<Client> {
       accumulator -= MS_PER_TICK;
       ticks++;
       if (client.paused) continue;
+      // Holding the click button on terrain re-issues the move order every 6 ticks, as in Diablo (spec 7.9b).
+      if (heldOnGround && hover && ++heldTicks % REISSUE_TICKS === 0) input.setOrder({ kind: 'ground', x: hover.x, y: hover.y });
       const inputFrame = input.frame();
-      // Holding the click button re-issues the order from wherever the cursor is now (spec 7.9b).
-      if ((inputFrame.held & ROLE_BITS.click) !== 0 && inputFrame.order === null && hover) input.setOrder({ kind: 'ground', x: hover.x, y: hover.y });
+      if ((inputFrame.held & ROLE_BITS.click) === 0) {
+        heldOnGround = false;
+        heldTicks = 0;
+      }
       runtime.tick(inputFrame);
     }
     // A stall longer than five ticks is dropped, not replayed.

@@ -3,10 +3,12 @@
  * (spec 5.4). This class is internal to `runtime`; clients hold a `Runtime`
  * (runtime.ts) and read through a `RuntimeView` (view.ts).
  */
+import { SpatialHash } from '@loreengine/algorithms';
 import { offsetCol } from '@loreengine/hexmath';
 import type {
   Action,
   ArchetypeDef,
+  AttackDef,
   ComponentData,
   ComponentPatch,
   EntityPlacement,
@@ -17,23 +19,28 @@ import type {
   SerializedEntity,
 } from '@loreengine/schema';
 import { ActionExecutor } from './actions.ts';
+import { Brains, registerBrainActions } from './brains.ts';
 import { ConditionEvaluator } from './conditions.ts';
 import { Diagnostics } from './diagnostics.ts';
-import { F_DEAD, F_DESPAWNING, F_HEALTH, F_PERSISTENT, F_SPAWNED, EntityStore, NO_ENTITY } from './entities.ts';
+import { F_COLLIDER, F_DEAD, F_DESPAWNING, F_HEALTH, F_MOVEMENT, F_PERSISTENT, F_SPAWNED, EntityStore, MAX_ENTITIES, NO_ENTITY, ORDER_NONE, WAYPOINT_STRIDE } from './entities.ts';
 import type { EntityId } from './entities.ts';
 import { EventBus } from './events.ts';
 import { FactionTable } from './factions.ts';
 import { InputState } from './input.ts';
 import { Matcher } from './match.ts';
 import type { MatchContext } from './match.ts';
+import { FLY_LEVELS, Movement } from './movement.ts';
+import { Orders } from './orders.ts';
+import { Paths } from './pathing.ts';
 import { PresentationLog } from './presentation.ts';
 import { Rng } from './rng.ts';
 import { Scope } from './scope.ts';
+import { Sight } from './sight.ts';
 import { msToTicks } from './time.ts';
 import { TimerStore } from './timers.ts';
 import { TriggerSystem } from './triggers.ts';
 import { VariableStore } from './variables.ts';
-import { World, modeBit } from './world.ts';
+import { MODE_FLY, World, modeBit } from './world.ts';
 
 /** The twelve steps of a tick, in order (spec 5.4). Changing this is a design change. */
 export const TICK_SLOTS = [
@@ -84,6 +91,8 @@ export interface MapInstance {
   regionMasks: Map<string, Uint8Array>;
   /** Region id -> its on-map cells, in stored order. */
   regionCells: Map<string, Int32Array>;
+  /** The same masks as a list in authored order, for region events. */
+  regionList: { id: string; mask: Uint8Array }[];
   world: World;
   placements: Map<string, EntityPlacement>;
 }
@@ -105,6 +114,17 @@ export class Sim {
   readonly evaluator: ConditionEvaluator;
   readonly executor: ActionExecutor;
   readonly triggers: TriggerSystem;
+
+  readonly paths: Paths;
+  readonly sight: Sight;
+  readonly movement: Movement;
+  readonly brains: Brains;
+  readonly orders: Orders;
+  /** Entities by cell, rebuilt per map: collision, acquisition, and entity casts query it. */
+  hash: SpatialHash | null = null;
+  /** The largest collider radius spawned so far: how far a spatial query must reach. */
+  maxRadius = 0.5;
+  readonly attackById = new Map<string, AttackDef>();
 
   readonly archetypeIndexById = new Map<string, number>();
   readonly mapById = new Map<string, MapDef>();
@@ -144,7 +164,17 @@ export class Sim {
     this.triggers = new TriggerSystem(project, this.bus, this.matcher, this.evaluator, this.executor, this.diagnostics);
     project.archetypes.forEach((a, i) => this.archetypeIndexById.set(a.id, i));
     for (const map of project.maps) this.mapById.set(map.id, map);
+    for (const attack of project.attacks) this.attackById.set(attack.id, attack);
     this.evaluator.inRegion = (regionId, index) => this.inRegion(regionId, index);
+    this.paths = new Paths(this);
+    this.sight = new Sight(this);
+    this.movement = new Movement(this);
+    this.brains = new Brains(this);
+    this.orders = new Orders(this);
+    // Phase 4 systems, in the slots of spec 5.4.
+    this.addSystem('input', () => this.orders.step());
+    this.addSystem('brains', () => this.brains.step());
+    this.addSystem('movement', () => this.movement.step());
   }
 
   /* ---------------------------------------------------------------------- */
@@ -228,12 +258,25 @@ export class Sim {
     return this.world === null ? 0 : this.world.surfaceHeight(x, y);
   }
 
+  /** Where an entity's feet are at (x, y): on the surface, or two levels above it for a flyer (spec 6.3). */
+  standingZ(index: number, x: number, y: number): number {
+    const ground = this.surfaceZ(x, y);
+    return this.entities.mode[index] === MODE_FLY ? ground + FLY_LEVELS * this.project.settings.levelHeight : ground;
+  }
+
   /** Put an entity somewhere at once: on the surface, with no interpolation from where it was. */
   place(index: number, x: number, y: number): void {
     const e = this.entities;
     e.x[index] = e.prevX[index] = x;
     e.y[index] = e.prevY[index] = y;
-    e.z[index] = e.prevZ[index] = this.surfaceZ(x, y);
+    e.z[index] = e.prevZ[index] = this.standingZ(index, x, y);
+    // `lastCell` is left alone, so the next movement step raises the region events of the jump.
+    if (this.hash !== null && this.world !== null) {
+      const cell = this.world.cellAt(x, y);
+      if (cell < 0) this.hash.remove(index);
+      else this.hash.update(index, cell);
+    }
+    this.paths.clear(index);
     this.presentation.raise('teleported', e.idAt(index));
   }
 
@@ -256,6 +299,15 @@ export class Sim {
       return NO_ENTITY;
     }
     const index = id & 0xffff;
+    const e = this.entities;
+    e.mode[index] = modeBit(data.movement ? data.movement.startMode : 'walk');
+    if (e.mode[index] === MODE_FLY) e.z[index] = e.prevZ[index] = this.standingZ(index, x, y);
+    if (data.collider && data.collider.radius > this.maxRadius) this.maxRadius = data.collider.radius;
+    this.brains.attach(index);
+    // Region events compare against the cell an entity was last seen on; spawning inside a region is not entering it.
+    const cell = this.world === null ? -1 : this.world.cellAt(x, y);
+    e.lastCell[index] = cell;
+    if (cell >= 0 && this.hash !== null) this.hash.insert(index, cell);
     for (let i = 0; i < this.spawnHooks.length; i++) this.spawnHooks[i]!(index);
     return id;
   }
@@ -273,12 +325,95 @@ export class Sim {
       // A map the player has left keeps health only where play changed it.
       if (full || dead || e.hp[index] !== e.hpMax[index]) patch.health = { current: e.hp[index]!, dead };
     }
+    if (full) this.captureMotion(index, patch);
     for (let i = 0; i < this.captureHooks.length; i++) this.captureHooks[i]!(index, patch, full);
     return patch;
   }
 
+  /** The Phase 4 runtime-only state of spec 7.3, for an exact resume. Only what differs from a fresh spawn is written. */
+  private captureMotion(index: number, patch: ComponentPatch): void {
+    const e = this.entities;
+    const flags = e.flags[index]!;
+    if ((flags & (F_COLLIDER | F_MOVEMENT)) !== 0) {
+      patch.motion = {
+        vx: e.vx[index]!,
+        vy: e.vy[index]!,
+        hitstop: e.hitstop[index]!,
+        lastCell: e.lastCell[index]!,
+        prevX: e.prevX[index]!,
+        prevY: e.prevY[index]!,
+        prevZ: e.prevZ[index]!,
+      };
+    }
+    if (e.hasGoal[index] === 1 || e.pathCount[index]! > 0 || e.pathPending[index]! >= 0 || e.repathAt[index]! > 0) {
+      const count = e.pathCount[index]!;
+      const base = index * WAYPOINT_STRIDE;
+      patch.path = {
+        goalX: e.goalX[index]!,
+        goalY: e.goalY[index]!,
+        hasGoal: e.hasGoal[index] === 1,
+        pending: this.paths.rankOf(index), // its place in the queue, not the raw sequence number
+        repathAt: e.repathAt[index]!,
+        blocked: e.blockedTicks[index]!,
+        index: e.pathIndex[index]!,
+        waypoints: Array.from(e.waypoints.subarray(base, base + count * 2)),
+      };
+    }
+    if (e.brain[index]! >= 0) {
+      patch.brain = {
+        state: this.brains.stateOf(index),
+        entered: e.brainEntered[index]!,
+        homeX: e.homeX[index]!,
+        homeY: e.homeY[index]!,
+        patrolIndex: e.patrolIndex[index]!,
+        wanderAt: e.wanderAt[index]!,
+      };
+    }
+    if (e.target[index] !== NO_ENTITY) patch.target = { id: e.target[index]!, lastSeen: e.lastSeen[index]! };
+    if (e.orderKind[index] !== ORDER_NONE) {
+      patch.order = { kind: e.orderKind[index]!, target: e.orderTarget[index]!, x: e.orderX[index]!, y: e.orderY[index]! };
+    }
+  }
+
   applyPatch(index: number, patch: ComponentPatch): void {
     const e = this.entities;
+    if (patch.path) {
+      const w = patch.path.waypoints;
+      const base = index * WAYPOINT_STRIDE;
+      const count = Math.min(w.length >> 1, WAYPOINT_STRIDE >> 1);
+      for (let k = 0; k < count * 2; k++) e.waypoints[base + k] = w[k]!;
+      e.pathCount[index] = count;
+      e.pathIndex[index] = Math.min(patch.path.index, Math.max(0, count - 1));
+      e.goalX[index] = patch.path.goalX;
+      e.goalY[index] = patch.path.goalY;
+      e.hasGoal[index] = patch.path.hasGoal ? 1 : 0;
+      e.pathPending[index] = patch.path.pending;
+      e.repathAt[index] = patch.path.repathAt;
+      e.blockedTicks[index] = patch.path.blocked;
+    }
+    if (patch.brain && e.brain[index]! >= 0) {
+      const state = this.brains.compiled[e.brain[index]!]!.stateIndex.get(patch.brain.state);
+      if (state === undefined) {
+        this.diagnostics.report('save-dropped-brain-state', `The save has a brain in state "${patch.brain.state}", which no longer exists; it restarts in its initial state.`);
+      } else {
+        e.brainState[index] = state;
+        e.brainEntered[index] = patch.brain.entered;
+        e.patrolIndex[index] = patch.brain.patrolIndex;
+        e.wanderAt[index] = patch.brain.wanderAt;
+      }
+      e.homeX[index] = patch.brain.homeX;
+      e.homeY[index] = patch.brain.homeY;
+    }
+    if (patch.target) {
+      e.target[index] = patch.target.id;
+      e.lastSeen[index] = patch.target.lastSeen;
+    }
+    if (patch.order) {
+      e.orderKind[index] = patch.order.kind;
+      e.orderTarget[index] = patch.order.target;
+      e.orderX[index] = patch.order.x;
+      e.orderY[index] = patch.order.y;
+    }
     if (patch.transform) {
       e.x[index] = e.prevX[index] = patch.transform.x;
       e.y[index] = e.prevY[index] = patch.transform.y;
@@ -288,6 +423,22 @@ export class Sim {
     if (patch.health && (e.flags[index]! & F_HEALTH) !== 0) {
       e.hp[index] = Math.min(patch.health.current, e.hpMax[index]!);
       if (patch.health.dead) e.flags[index] = e.flags[index]! | F_DEAD;
+    }
+    if (patch.transform && this.hash !== null && this.world !== null) {
+      // The entity was indexed where it spawned; it stands where the save says.
+      const cell = this.world.cellAt(patch.transform.x, patch.transform.y);
+      if (cell < 0) this.hash.remove(index);
+      else this.hash.update(index, cell);
+      if (!patch.motion) e.lastCell[index] = cell;
+    }
+    if (patch.motion) {
+      e.vx[index] = patch.motion.vx;
+      e.vy[index] = patch.motion.vy;
+      e.hitstop[index] = patch.motion.hitstop;
+      e.lastCell[index] = patch.motion.lastCell;
+      e.prevX[index] = patch.motion.prevX;
+      e.prevY[index] = patch.motion.prevY;
+      e.prevZ[index] = patch.motion.prevZ;
     }
     for (let i = 0; i < this.applyHooks.length; i++) this.applyHooks[i]!(index, patch);
   }
@@ -347,9 +498,11 @@ export class Sim {
     }
     const world = new World(this.project, def);
     this.world = world;
+    this.hash = new SpatialHash(def.width, def.height, MAX_ENTITIES);
+    const regionList = def.regions.map((r) => ({ id: r.id as string, mask: regionMasks.get(r.id)! }));
     const placements = new Map<string, EntityPlacement>();
     for (const p of def.placements) placements.set(p.key, p);
-    const map: MapInstance = { def, scope, regionMasks, regionCells, world, placements };
+    const map: MapInstance = { def, scope, regionMasks, regionCells, regionList, world, placements };
     this.map = map;
     for (let i = 0; i < this.mapOpenHooks.length; i++) this.mapOpenHooks[i]!(map);
     this.triggers.bind(scope, def.triggers);
@@ -361,10 +514,13 @@ export class Sim {
         if (e.alive[i] === 1 && (e.flags[i]! & F_PERSISTENT) === 0) e.removeNow(i);
       }
     });
+    // Pending path requests belong to the map scope (spec 9.3).
+    scope.own(() => this.paths.reset());
     scope.own(() => {
       if (this.map === map) {
         this.map = null;
         this.world = null;
+        this.hash = null;
       }
     });
     // Presentation only: tell the client which map is up, and start its music.
@@ -427,7 +583,12 @@ export class Sim {
     this.enterMap(def);
     const e = this.entities;
     for (let i = 0; i < e.highWater; i++) {
-      if (e.alive[i] === 1 && (e.flags[i]! & F_PERSISTENT) !== 0) this.place(i, x, y);
+      if (e.alive[i] !== 1 || (e.flags[i]! & F_PERSISTENT) === 0) continue;
+      // The cell it stood on belonged to the old map: arriving inside a region here counts as entering it.
+      e.lastCell[i] = -1;
+      this.orders.cancel(i);
+      e.target[i] = NO_ENTITY;
+      this.place(i, x, y);
     }
   }
 
@@ -590,6 +751,7 @@ export class Sim {
 
     this.timers.importSave(save.timers);
     this.bus.importQueue(save.carriedEvents);
+    this.paths.restoreQueue();
   }
 
   private keepIfKnown(known: { has(key: string): boolean }, key: string, mapId: string): boolean {
@@ -625,6 +787,7 @@ export function registerCoreActions(sim: Sim): void {
   // Audio actions never touch audio: they raise presentation events the mixer subscribes to.
   x.register('play-sfx', (a) => sim.presentation.raise('sfx', -1, -1, a.assetId, 1));
   x.register('change-bgm', (a) => sim.presentation.raise('bgm', -1, -1, a.assetId ?? '', a.fadeMs));
+  registerBrainActions(sim);
 }
 
 /** Phase 3A's entity actions: spawn, despawn, and teleport (within a map, or across maps). */

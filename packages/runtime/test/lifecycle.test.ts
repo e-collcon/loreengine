@@ -198,8 +198,10 @@ describe('[P3A.lifecycle.save-delta] what a map remembers', () => {
 
   it('other maps keep only what lasts: who is gone, health, and spawned survivors', () => {
     const sim = start();
-    disturb(sim);
+    // The two dummies spawn where the player stands. (Since chunk 5, separation then pushes the
+    // player off them, so the reference point is taken before, not after.)
     const spawnedAt = [sim.entities.x[0], sim.entities.y[0]];
+    disturb(sim);
     toCellar(sim);
     const delta = sim.mapDeltas.get(TERRACES)!;
     expect([...delta.removed]).toEqual([K.behindCliff]);

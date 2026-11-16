@@ -14,6 +14,7 @@ Items that need E's ruling. Nothing here blocks the build order; each was resolv
 - **N6 — Wide ramps do not connect sideways. This departs from one clause of §6.3.** The connection rule in §6.3 has two halves: edges connect when both are flat at the same height, "or both are sloped edges of ramps with the same level and direction (a wide ramp)". The same section then promises that surface height "is continuous across every connecting edge: no steps, no seams", and §6.11 tests exactly that. On a pointy-top hex grid the two cannot both hold. Take ramp *a* rising east and its north-east neighbor *b*, also rising east at the same level. Their shared edge runs from *a*'s top vertex to *a*'s upper-right corner. Seen from *a*, those points are at L + ½ and L + 1. Seen from *b*, the same two points are its low-edge corner and its bottom vertex: L and L + ½. So the two surfaces differ by half a level along the whole shared edge, for any pair of side-adjacent same-direction ramps (the neighbor is always offset half a hex along the rise). No height function fixes this, because the end points are pinned by the flat cells beyond each ramp's low and high edges. `world.test.ts` has a test that measures the half-level gap.
   **What I did:** the first half of the rule only. A ramp's four side edges never connect, so the model stays self-consistent: the half-level step between two parallel ramp lanes is a small cliff for walking, for sight, and for the renderer alike, which is the point of §6.3's "one elevation model, three consumers". Parallel ramps still work as lanes: each is entered at its low edge and left at its high edge. The ★ connection-table test covers wide ramps and expects `false`; the continuity test passes over every connecting edge.
   **If E prefers the spec's literal rule** (units may cross between lanes, with a 0.25-unit pop in `z` and a cliff face drawn on an edge that walking ignores), it is one line in `edgesConnect` (`runtime/src/world.ts`) and one expectation in the table test; the continuity test would then need an exemption for wide-ramp edges. A true wide ramp on hexes needs a schema change instead: ramp directions through corners, or half-level ramp cells. *(§6.3, §6.11)*
+- **N7 — There is no "ported hex line".** §7.6 says `castSegment` "walks the cells under the segment with the ported hex line", but the v0.6.0 files in `legacy/` contain no hex line function (v0's line of sight was `distTiles <= 6`). The cast is written fresh; see D100. *(§7.6, kickoff §4)*
 
 ## Chunk 1 — Architecture & Schema
 
@@ -145,3 +146,50 @@ Items that need E's ruling. Nothing here blocks the build order; each was resolv
 - **D89 — Input mapper conventions.** Binding codes are `KeyboardEvent.code` values, `Mouse0..2` for mouse buttons, and `Pointer` for the cursor. An `axis2` action reads bindings in groups of four: up, left, down, right. Diagonals are normalized. An action whose `kind` and `role` disagree, or with no role, drives nothing. The click role's press carries the `ClickOrder` the client resolved by picking (entities first, then terrain). *(§5.9, §7.9b)*
 - **D90 — The client loop drops a backlog beyond five ticks** rather than replaying it, and caps one frame's elapsed time at 250 ms. *(§5.3)*
 - **D91 — Occlusion silhouette, atlas textures, the tier pick, animation playback, feedback, particles, and the browser render bench are not in the spike.** They are chunk 7 (and the bench is listed under Known issues). *(§10)*
+
+## Chunk 5 — Movement, sight, click orders (4A)
+
+### Entity state
+
+- **D92 — Runtime-only state is dense arrays indexed by entity index,** not sparse sets. §7.3 says "components live in sparse sets; the hot ones are struct-of-arrays". With an 8,192 cap, a typed array per field is a few megabytes in total, keeps iteration in index order (which determinism needs), and avoids a second indirection. Every array is reset when a slot is reused. *(§7.3)*
+- **D93 — An intent is a unit direction (length ≤ 1); movement multiplies by speed.** So the `slowed` / `rooted` / restricted scaling of §7.4 is applied in one place. *(§7.4)*
+- **D94 — `InputFrame.move` is in world-plane axes** (right is +x, down the screen is +y). §7.4 says the move vector is "screen-relative, converted to the world plane"; with a camera that only squashes y, the axes coincide, and the runtime cannot know the squash ratio (it is a render constant, N3). *(§5.9, §7.4)*
+
+### Movement and collision
+
+- **D95 — A substep never moves the center further than 0.9 × the collider radius.** §7.4 splits a displacement in two when it is longer than the radius. That alone still lets an extreme knockback tunnel, so each substep is also clamped. This is what lets the ★ cliffs-hold test throw knockbacks of up to 40 units per second. *(§7.4, §7.14)*
+- **D96 — Blocked edges are read from the link table, not stored as segments.** §7.4 says they are "precomputed per map as segments". The link table (D66) already says which edges are blocked per mode; the segment ends are six offsets from the cell center. Collision tests the cell under the collider and its six neighbors, and skips everything when the circle is well inside its hex. *(§7.4)*
+- **D97 — Collision is a push-out along the edge normal,** in up to three passes for corners; that is the slide. Knockback velocity also loses its component into the wall. If the circle is still inside something after three passes, the entity stays where it was. *(§7.4)*
+- **D98 — Separation details.** Candidates come from the spatial hash and are sorted by index before use, because bucket order depends on history and a resumed session rebuilds the hash (L5). An entity with neither `movement` nor `motion` is immovable; one with `movement` but no `motion` has mass 1. Dead entities do not push. After a push the collider is run against blocked edges again, so being pushed obeys cliffs. *(§7.4)*
+- **D99 — Flyers are at two levels above the surface from the moment they spawn,** and after every `place`. *(§6.3)*
+- **D100 — `castSegment` samples the segment every 0.2 hex and bisects each cell change.** A cell's surface is a plane and the segment's height is linear, so testing where the segment enters and leaves each cell is exact. A corner clipped for less than 0.2 of a hex can be missed. Blocking terrain is an infinitely tall wall from the first point inside it. Entity hits use the spatial hash and return the nearest cylinder entered, ties to the lower index. *(§7.6)*
+- **D101 — "B stands on a higher level than A" compares the ground under each,** and means more than half a level higher. Using the ground rather than `z` keeps a flyer from counting as high ground by flying. *(§7.6)*
+- **D102 — An entity with `acquisition` but no `sight` sees with its acquisition range,** from 90% of its collider height. *(§7.6, §7.7)*
+
+### Regions, acquisition, brains
+
+- **D103 — Region events compare the cell an entity stands on with the cell it stood on after the last movement step.** Spawning inside a region is not entering it. A teleport is: `place` leaves the remembered cell alone, so the next movement step raises exit and enter. Arriving on a new map inside a region raises `region-entered`. *(§4.5)*
+- **D104 — Acquisition only targets entities with health,** and never switches while it has a target (§7.7: "it keeps the target until…"). *(§7.7)*
+- **D105 — One brain transition per tick.** Entering a state clears the entity's path and goal, runs `onEnter` with the entity as `subject` and its target as `other`, and raises `brain-state-entered`. Starting in the initial state at spawn is not "entering" it: no event, no `onEnter`. *(§7.11)*
+- **D106 — Behavior details.** `wander` picks uniformly within the disc and skips a point it cannot stand on. `patrol` counts as arrived within 0.3 of a cell center; a region on another map does nothing. `chase` asks for a new path when the target has moved more than 1 unit from the path's goal. `flee` moves straight away while the target is within `distance`, and stops beyond it. `attack` faces the target; the swing arrives with chunk 6 through a hook. *(§7.11)*
+
+### Pathfinding
+
+- **D107 — An exhausted search walks its partial path and retries after 0.5 s.** §9.2 says that at 4,096 expansions the "request fails; brain retries after 0.5 s". A\* already knows the explored cell nearest the goal, so the walker sets off toward it and asks again 0.5 s later from wherever it is. On a large map a far click therefore makes progress instead of doing nothing. *(§9.2)*
+- **D108 — String-pulling will not cross terrain costlier than the stretch it replaces.** §7.5 smooths "wherever the straight line crosses only connecting edges". Taken literally that cuts straight across lava that A\* paid a detour to avoid (the first run of the move-cost test did exactly that). A shortcut is also tested along two side lines 0.8 of the collider radius out, looks at most 24 cells ahead, and treats a corner crossing as blocked. *(§7.5)*
+- **D109 — Searches run at the start of the movement step,** eight at most, in request order. A request made while one is queued just updates the goal. *(§7.5, §9.2)*
+- **D110 — A path ends on the exact point asked for** when the goal is reached and was not truncated; otherwise on the last cell's center. *(§7.5)*
+
+### Click orders
+
+- **D111 — Ranges.** An attack order closes to the attack-primary attack's `aiRange` (or its hitbox reach) plus the target's radius; a use order to the target's `interactable.radius`; "move next to" to both radii plus 0.2. *(§7.9b)*
+- **D112 — "Unreachable" is detected by a path toward the target ending out of range** with the target where it was; the order then cancels and the player stays at the closest reachable point. *(§7.9b)*
+- **D113 — Holding the button re-issues a ground order every 6 ticks in the client,** which puts it in the recorded input stream, so replays reproduce it. An attack order repeats while the click role is held (chunk 6). *(§7.9b)*
+- **D114 — A click on yourself, a dead entity, or an untargetable one does nothing** (`clickAction` returns `'none'`). The foundation's rows are attack, use, move-to; talk, pick up, and destructible attack arrive with their phases. *(§7.9b)*
+
+### Saves and tests
+
+- **D115 — `ComponentPatch` gained `motion`, `path`, `brain`, `target`, and `order`.** `motion` carries the previous position (blocked detection reads it) and the cell region events last saw; `path` carries the queue rank of a waiting request rather than its raw sequence number, so the save of a resumed session matches. Both were found by the mid-chase save-resume test. *(§5.10, §5.12)*
+- **D116 — Two more edits to earlier chunks' tests.** `lifecycle.test.ts` took a reference position after spawning dummies on top of the player; separation now pushes the player off them, so the reference is taken before. `runtime.test.ts`'s view key list gained `clickAction`, `castSegment`, `canSee` (D76). *(§9.6)*
+- **D117 — The benches run inside Vitest, not on a "production build".** The runtime has no build step (D2), so there is no separate production artifact to bench in Node; the same TypeScript is what ships to Vite. *(§9.1)*
+- **D118 — `worldToCellIndex` returns `+0`, never `-0`.** Rounding a small negative coordinate produced `-0` for cell 0. *(§6.3)*

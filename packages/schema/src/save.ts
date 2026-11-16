@@ -31,6 +31,36 @@ export const ComponentPatchSchema = z
     id: entityId.optional(),
     transform: z.strictObject({ x: finite, y: finite, z: finite, facing: finite }).optional(),
     health: z.strictObject({ current: finite, dead: z.boolean() }).optional(),
+    /** Knockback velocity, hitstop, the cell region events last saw, and the previous position. */
+    motion: z
+      .strictObject({
+        vx: finite,
+        vy: finite,
+        hitstop: tick,
+        lastCell: z.int(),
+        /** Where the entity was a tick ago: interpolation and blocked detection both read it. */
+        prevX: finite,
+        prevY: finite,
+        prevZ: finite,
+      })
+      .optional(),
+    /** The goal being walked to, the smoothed path, and any queued request. */
+    path: z
+      .strictObject({
+        goalX: finite,
+        goalY: finite,
+        hasGoal: z.boolean(),
+        pending: z.int(),
+        repathAt: tick,
+        blocked: tick,
+        index: tick,
+        waypoints: z.array(finite),
+      })
+      .optional(),
+    brain: z.strictObject({ state: z.string(), entered: tick, homeX: finite, homeY: finite, patrolIndex: tick, wanderAt: tick }).optional(),
+    target: z.strictObject({ id: z.int(), lastSeen: tick }).optional(),
+    /** The player's click order. */
+    order: z.strictObject({ kind: z.int().min(0).max(4), target: z.int(), x: finite, y: finite }).optional(),
   })
   .meta({ id: 'ComponentPatch' });
 

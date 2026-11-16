@@ -121,7 +121,7 @@ export function worldToCellIndex(
   else if (dr > ds) r = -q - s;
   const col = offsetCol(q, r);
   if (col < 0 || r < 0 || col >= width || r >= height) return -1;
-  return r * width + col;
+  return (r * width + col) | 0; // `| 0` folds the -0 that rounding a small negative yields
 }
 
 /** Hex (cube) distance in cells between two offset cells. */

@@ -61,6 +61,11 @@ function readout(c: Client): string {
   ];
   if (p >= 0) lines.push(`player  x ${e.x(p).toFixed(2)}  y ${e.y(p).toFixed(2)}  z ${e.z(p).toFixed(2)}`);
   lines.push(`hover   ${c.hover ? cellText(c.hover.cell) : '—'}`);
+  if (c.hoverEntity >= 0 && e.alive(c.hoverEntity)) {
+    const name = project.archetypes[e.archetype(c.hoverEntity)]!.name;
+    const brain = e.brainState(c.hoverEntity);
+    lines.push(`entity  ${name}  click: ${view.clickAction(e.id(c.hoverEntity))}${brain ? `  brain: ${brain}` : ''}  hp ${e.hp(c.hoverEntity)}/${e.hpMax(c.hoverEntity)}`);
+  }
   lines.push(`pick    ${c.lastPick ? `${cellText(c.lastPick.cell)}  z ${c.lastPick.z.toFixed(2)}` : '—'}`);
   return lines.join('\n');
 }
