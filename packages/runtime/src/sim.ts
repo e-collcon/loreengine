@@ -3,7 +3,7 @@
  * (spec 5.4). This class is internal to `runtime`; clients hold a `Runtime`
  * (runtime.ts) and read through a `RuntimeView` (view.ts).
  */
-import { offsetCol, worldToCellIndex } from '@loreengine/hexmath';
+import { offsetCol } from '@loreengine/hexmath';
 import type {
   Action,
   ArchetypeDef,
@@ -19,7 +19,7 @@ import type {
 import { ActionExecutor } from './actions.ts';
 import { ConditionEvaluator } from './conditions.ts';
 import { Diagnostics } from './diagnostics.ts';
-import { F_DEAD, F_HEALTH, F_PERSISTENT, F_SPAWNED, EntityStore, NO_ENTITY } from './entities.ts';
+import { F_DEAD, F_DESPAWNING, F_HEALTH, F_PERSISTENT, F_SPAWNED, EntityStore, NO_ENTITY } from './entities.ts';
 import type { EntityId } from './entities.ts';
 import { EventBus } from './events.ts';
 import { FactionTable } from './factions.ts';
@@ -33,6 +33,7 @@ import { msToTicks } from './time.ts';
 import { TimerStore } from './timers.ts';
 import { TriggerSystem } from './triggers.ts';
 import { VariableStore } from './variables.ts';
+import { World, modeBit } from './world.ts';
 
 /** The twelve steps of a tick, in order (spec 5.4). Changing this is a design change. */
 export const TICK_SLOTS = [
@@ -61,6 +62,10 @@ export type System = (sim: Sim) => void;
 export type RuntimeCommand = { type: 'test-actions'; actions: Action[] };
 
 export const MAX_COMMANDS_PER_TICK = 256;
+/** Crossfade when a map's own music starts on entering it. */
+export const MAP_BGM_FADE_MS = 1000;
+/** Tries to find a passable cell when spawning into a region. */
+const SPAWN_TRIES = 8;
 export type ClockMode = 'continuous' | 'stepped';
 export type Outcome = 'victory' | 'defeat';
 
@@ -77,6 +82,9 @@ export interface MapInstance {
   scope: Scope;
   /** Region id -> one byte per cell, 1 inside. */
   regionMasks: Map<string, Uint8Array>;
+  /** Region id -> its on-map cells, in stored order. */
+  regionCells: Map<string, Int32Array>;
+  world: World;
   placements: Map<string, EntityPlacement>;
 }
 
@@ -107,6 +115,10 @@ export class Sim {
   pendingSteps = 0;
   outcome: Outcome | null = null;
   map: MapInstance | null = null;
+  /** The loaded map's elevation model; null between maps. */
+  world: World | null = null;
+  /** A cross-map teleport waiting for the end of the tick. */
+  pendingMapChange: { mapId: string; x: number; y: number } | null = null;
   disposed = false;
 
   private readonly systems: System[][] = TICK_SLOTS.map(() => []);
@@ -199,6 +211,11 @@ export class Sim {
       });
     }
     for (let i = 0; i < this.endOfTickHooks.length; i++) this.endOfTickHooks[i]!(this);
+    const change = this.pendingMapChange;
+    if (change !== null) {
+      this.pendingMapChange = null;
+      this.changeMap(this.mapById.get(change.mapId)!, change.x, change.y);
+    }
   }
   readonly endOfTickHooks: System[] = [];
 
@@ -206,8 +223,19 @@ export class Sim {
   /*  Entities                                                              */
   /* ---------------------------------------------------------------------- */
 
-  /** Supplied by the world (Phase 3): surface height under a point. */
-  surfaceZ: (x: number, y: number) => number = () => 0;
+  /** Surface height under a point on the loaded map. */
+  surfaceZ(x: number, y: number): number {
+    return this.world === null ? 0 : this.world.surfaceHeight(x, y);
+  }
+
+  /** Put an entity somewhere at once: on the surface, with no interpolation from where it was. */
+  place(index: number, x: number, y: number): void {
+    const e = this.entities;
+    e.x[index] = e.prevX[index] = x;
+    e.y[index] = e.prevY[index] = y;
+    e.z[index] = e.prevZ[index] = this.surfaceZ(x, y);
+    this.presentation.raise('teleported', e.idAt(index));
+  }
 
   /** Build an entity from an archetype plus its placement overrides (spec 7.3). */
   spawn(
@@ -241,7 +269,9 @@ export class Sim {
       patch.transform = { x: e.x[index]!, y: e.y[index]!, z: e.z[index]!, facing: e.facing[index]! };
     }
     if ((e.flags[index]! & F_HEALTH) !== 0) {
-      patch.health = { current: e.hp[index]!, dead: (e.flags[index]! & F_DEAD) !== 0 };
+      const dead = (e.flags[index]! & F_DEAD) !== 0;
+      // A map the player has left keeps health only where play changed it.
+      if (full || dead || e.hp[index] !== e.hpMax[index]) patch.health = { current: e.hp[index]!, dead };
     }
     for (let i = 0; i < this.captureHooks.length; i++) this.captureHooks[i]!(index, patch, full);
     return patch;
@@ -288,7 +318,7 @@ export class Sim {
     const mask = map.regionMasks.get(regionId);
     if (!mask) return false;
     const e = this.entities;
-    const cell = worldToCellIndex(e.x[index]!, e.y[index]!, this.project.settings.hexSize, map.def.width, map.def.height);
+    const cell = map.world.cellAt(e.x[index]!, e.y[index]!);
     return cell >= 0 && mask[cell] === 1;
   }
 
@@ -299,18 +329,27 @@ export class Sim {
   openMap(def: MapDef): MapInstance {
     const scope = new Scope('map');
     const regionMasks = new Map<string, Uint8Array>();
+    const regionCells = new Map<string, Int32Array>();
     for (const region of def.regions) {
       const mask = new Uint8Array(def.width * def.height);
+      const cells: number[] = [];
       for (let i = 0; i + 1 < region.cells.length; i += 2) {
         const r = region.cells[i + 1]!;
         const col = offsetCol(region.cells[i]!, r);
-        if (col >= 0 && r >= 0 && col < def.width && r < def.height) mask[r * def.width + col] = 1;
+        if (col >= 0 && r >= 0 && col < def.width && r < def.height) {
+          const cell = r * def.width + col;
+          if (mask[cell] === 0) cells.push(cell);
+          mask[cell] = 1;
+        }
       }
       regionMasks.set(region.id, mask);
+      regionCells.set(region.id, Int32Array.from(cells));
     }
+    const world = new World(this.project, def);
+    this.world = world;
     const placements = new Map<string, EntityPlacement>();
     for (const p of def.placements) placements.set(p.key, p);
-    const map: MapInstance = { def, scope, regionMasks, placements };
+    const map: MapInstance = { def, scope, regionMasks, regionCells, world, placements };
     this.map = map;
     for (let i = 0; i < this.mapOpenHooks.length; i++) this.mapOpenHooks[i]!(map);
     this.triggers.bind(scope, def.triggers);
@@ -323,8 +362,14 @@ export class Sim {
       }
     });
     scope.own(() => {
-      if (this.map === map) this.map = null;
+      if (this.map === map) {
+        this.map = null;
+        this.world = null;
+      }
     });
+    // Presentation only: tell the client which map is up, and start its music.
+    this.presentation.raise('map-changed', -1, -1, def.id);
+    if (def.bgm !== undefined) this.presentation.raise('bgm', -1, -1, def.bgm, MAP_BGM_FADE_MS);
     return map;
   }
 
@@ -346,7 +391,44 @@ export class Sim {
     delta.changed.clear();
     delta.spawned = [];
     this.bus.raise('map-loaded', NO_ENTITY, NO_ENTITY, map.def.id);
-    this.presentation.raise('map-changed', -1, -1, map.def.id);
+  }
+
+  /**
+   * Leave the loaded map (spec 6.5): write its lasting delta, raise
+   * `map-unloaded` (so global triggers can react), then dispose the map
+   * scope, which releases its entities, subscriptions, and timers.
+   */
+  leaveMap(): void {
+    const map = this.map;
+    if (map === null) return;
+    const e = this.entities;
+    const delta = this.deltaOf(map.def.id);
+    delta.changed.clear();
+    delta.spawned = [];
+    for (let i = 0; i < e.highWater; i++) {
+      if (e.alive[i] !== 1 || (e.flags[i]! & (F_PERSISTENT | F_DESPAWNING)) !== 0) continue;
+      const lasting = this.capture(i, false);
+      const key = e.placementKey[i]!;
+      if (key !== '') {
+        // Placed entities return to their placed positions on re-entry; only what lasts is kept.
+        if (Object.keys(lasting).length > 0) delta.changed.set(key, lasting);
+      } else if ((e.flags[i]! & F_SPAWNED) !== 0) {
+        lasting.transform = { x: e.x[i]!, y: e.y[i]!, z: e.z[i]!, facing: e.facing[i]! };
+        delta.spawned.push({ archetypeId: this.project.archetypes[e.archetype[i]!]!.id, state: lasting });
+      }
+    }
+    this.bus.raise('map-unloaded', NO_ENTITY, NO_ENTITY, map.def.id);
+    map.scope.dispose();
+  }
+
+  /** Teleport across maps: unload, load, and move every persistent entity across, state intact. */
+  changeMap(def: MapDef, x: number, y: number): void {
+    this.leaveMap();
+    this.enterMap(def);
+    const e = this.entities;
+    for (let i = 0; i < e.highWater; i++) {
+      if (e.alive[i] === 1 && (e.flags[i]! & F_PERSISTENT) !== 0) this.place(i, x, y);
+    }
   }
 
   private spawnSerialized(saved: SerializedEntity, spawned: boolean): EntityId {
@@ -519,6 +601,7 @@ export class Sim {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.pendingMapChange = null;
     this.map?.scope.dispose();
     this.sessionScope.dispose();
     this.bus.clear();
@@ -542,4 +625,74 @@ export function registerCoreActions(sim: Sim): void {
   // Audio actions never touch audio: they raise presentation events the mixer subscribes to.
   x.register('play-sfx', (a) => sim.presentation.raise('sfx', -1, -1, a.assetId, 1));
   x.register('change-bgm', (a) => sim.presentation.raise('bgm', -1, -1, a.assetId ?? '', a.fadeMs));
+}
+
+/** Phase 3A's entity actions: spawn, despawn, and teleport (within a map, or across maps). */
+export function registerWorldActions(sim: Sim): void {
+  const x = sim.executor;
+  const buffer = new Int32Array(sim.entities.capacity);
+  const e = sim.entities;
+
+  x.register('spawn', (a, ctx) => {
+    const archetypeIndex = sim.archetypeIndexById.get(a.archetypeId);
+    const map = sim.map;
+    if (archetypeIndex === undefined || map === null) return;
+    const mode = modeBit(sim.project.archetypes[archetypeIndex]!.components.movement?.startMode ?? 'walk');
+    for (let k = 0; k < a.count; k++) {
+      let px: number;
+      let py: number;
+      if (a.at === 'subject') {
+        const subject = e.indexOf(ctx.subject);
+        if (subject < 0) {
+          sim.diagnostics.report('spawn-no-subject', 'A spawn "at subject" ran with no subject entity; nothing was spawned.');
+          return;
+        }
+        px = e.x[subject]!;
+        py = e.y[subject]!;
+      } else {
+        const cells = map.regionCells.get(a.at);
+        if (cells === undefined || cells.length === 0) {
+          sim.diagnostics.report('spawn-no-region', `Region ${a.at} is empty or not on the current map; nothing was spawned.`);
+          return;
+        }
+        // Spawns draw from the simulation stream (spec 5.8).
+        let cell = -1;
+        for (let attempt = 0; attempt < SPAWN_TRIES && cell < 0; attempt++) {
+          const pick = cells[sim.rng.nextInt(cells.length)]!;
+          if (map.world.passable(pick, mode)) cell = pick;
+        }
+        if (cell < 0) {
+          sim.diagnostics.report('spawn-no-room', `No passable cell was found in region ${a.at}; one spawn was skipped.`);
+          continue;
+        }
+        px = map.world.centerX(cell);
+        py = map.world.centerY(cell);
+      }
+      const id = sim.spawn(archetypeIndex, px, py, 0, null, true);
+      if (id !== NO_ENTITY) sim.bus.raise('entity-spawned', id);
+    }
+  });
+
+  x.register('despawn', (a, ctx) => {
+    const n = sim.matcher.resolve(a.target, ctx, buffer);
+    for (let i = 0; i < n; i++) e.requestDespawn(e.idAt(buffer[i]!));
+  });
+
+  x.register('teleport', (a, ctx) => {
+    const n = sim.matcher.resolve(a.target, ctx, buffer);
+    if (n === 0) return;
+    if (sim.map !== null && a.mapId === sim.map.def.id) {
+      for (let i = 0; i < n; i++) sim.place(buffer[i]!, a.x, a.y);
+      return;
+    }
+    // Across maps only persistent entities travel; the move happens at the end of the tick.
+    let persistent = false;
+    for (let i = 0; i < n; i++) if ((e.flags[buffer[i]!]! & F_PERSISTENT) !== 0) persistent = true;
+    if (!persistent) {
+      sim.diagnostics.report('teleport-not-persistent', 'A cross-map teleport matched no persistent entity; map entities cannot leave their map.');
+      return;
+    }
+    if (!sim.mapById.has(a.mapId)) return;
+    sim.pendingMapChange = { mapId: a.mapId, x: a.x, y: a.y };
+  });
 }

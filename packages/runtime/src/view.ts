@@ -4,7 +4,8 @@
  * reachable from here. Everything a `RuntimeView` returns is a value, a
  * read-only authored object, or a visitor callback.
  */
-import type { ComponentData, Project, VariableValue } from '@loreengine/schema';
+import type { HexDir } from '@loreengine/hexmath';
+import type { ComponentData, MovementMode, Project, VariableValue } from '@loreengine/schema';
 import type { DiagnosticEntry } from './diagnostics.ts';
 import type { EntityId } from './entities.ts';
 import type { PresentationEvent } from './presentation.ts';
@@ -46,6 +47,29 @@ export interface EntityView {
   placementKey(index: number): string;
 }
 
+/** The loaded map's elevation model (spec 6.3): the same queries the simulation uses. */
+export interface WorldView {
+  /** False between maps; every query then answers as an empty map. */
+  readonly loaded: boolean;
+  readonly width: number;
+  readonly height: number;
+  /** Cell index under a world point, or -1 off the map. */
+  cellAt(x: number, y: number): number;
+  /** Surface height in world units. */
+  surfaceHeight(x: number, y: number): number;
+  /** Height of a cell's edge in levels, or 'sloped' for a ramp's side edges. */
+  edgeHeight(cell: number, dir: HexDir): number | 'sloped';
+  connects(a: number, b: number, mode: MovementMode): boolean;
+  /** Cliff level of a cell, 0..maxLevel. */
+  level(cell: number): number;
+  /** 0, or the HexDir a ramp rises toward. */
+  ramp(cell: number): number;
+  /** Index into `project.terrains`. */
+  terrain(cell: number): number;
+  centerX(cell: number): number;
+  centerY(cell: number): number;
+}
+
 export interface PresentationView {
   /** The cursor a new subscriber starts from. */
   readonly end: number;
@@ -76,6 +100,7 @@ export interface RuntimeView {
   /** Set once `end-session` has run; the runtime then stops advancing. */
   readonly outcome: Outcome | null;
   readonly entities: EntityView;
+  readonly world: WorldView;
   readonly presentation: PresentationView;
   readonly diagnostics: DiagnosticsView;
   variable(id: string): VariableValue | undefined;
@@ -83,3 +108,7 @@ export interface RuntimeView {
   /** Hash of everything a save would hold (minus its timestamp): the determinism tests compare these. */
   stateHash(): string;
 }
+
+export { World, edgeLevel, edgesConnect, modeBit, MODE_WALK, MODE_SWIM, MODE_FLY, SLOPED } from './world.ts';
+export { lintMap, lintProject, MAX_UNREACHABLE_AREAS } from './lint.ts';
+export type { LintWarning, LintCode } from './lint.ts';

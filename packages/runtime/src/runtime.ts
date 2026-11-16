@@ -10,7 +10,7 @@ import { F_DEAD } from './entities.ts';
 import { hashText } from './hash.ts';
 import { quantizeInput } from './input.ts';
 import type { InputFrame } from './input.ts';
-import { Sim, registerCoreActions } from './sim.ts';
+import { Sim, registerCoreActions, registerWorldActions } from './sim.ts';
 import type { ClockMode, RuntimeCommand, TickSlot } from './sim.ts';
 import type { RuntimeView } from './view.ts';
 
@@ -56,15 +56,6 @@ export interface Runtime {
   dispose(): void;
 }
 
-/** Extra systems a later chunk installs into a new simulation. */
-export type Installer = (sim: Sim) => void;
-const installers: Installer[] = [];
-
-/** Register a system installer. Used by this package's own modules. */
-export function addInstaller(install: Installer): void {
-  installers.push(install);
-}
-
 /** Build the internal simulation. Exposed for this package's tests; clients use `createRuntime`. */
 export function createSim(project: Project, save: SaveState | null, opts: RuntimeOptions): Sim {
   const issues = checkProject(project);
@@ -73,7 +64,7 @@ export function createSim(project: Project, save: SaveState | null, opts: Runtim
   }
   const sim = new Sim(project);
   registerCoreActions(sim);
-  for (const install of installers) install(sim);
+  registerWorldActions(sim);
   sim.onSlot = opts.onSlot ?? null;
   if (save) sim.restore(save);
   else sim.start(opts.seed, opts.clockMode);
@@ -144,6 +135,26 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
       countOf: (code) => sim.diagnostics.countOf(code),
       counters: () => sim.diagnostics.counters(),
       entries: () => sim.diagnostics.entries(),
+    },
+    world: {
+      get loaded() {
+        return sim.world !== null;
+      },
+      get width() {
+        return sim.world ? sim.world.width : 0;
+      },
+      get height() {
+        return sim.world ? sim.world.height : 0;
+      },
+      cellAt: (x, y) => (sim.world ? sim.world.cellAt(x, y) : -1),
+      surfaceHeight: (x, y) => (sim.world ? sim.world.surfaceHeight(x, y) : 0),
+      edgeHeight: (cell, dir) => (sim.world ? sim.world.edgeHeight(cell, dir) : 0),
+      connects: (a, b, mode) => (sim.world ? sim.world.connects(a, b, mode) : false),
+      level: (cell) => (sim.world ? sim.world.level[cell]! : 0),
+      ramp: (cell) => (sim.world ? sim.world.ramp[cell]! : 0),
+      terrain: (cell) => (sim.world ? sim.world.terrainDef[cell]! : 0),
+      centerX: (cell) => (sim.world ? sim.world.centerX(cell) : 0),
+      centerY: (cell) => (sim.world ? sim.world.centerY(cell) : 0),
     },
     variable: (id) => sim.variables.get(id),
     stats: () => ({ entities: e.count, subscriptions: sim.bus.subscriptionCount, timers: sim.timers.count, queuedEvents: sim.bus.queued }),
