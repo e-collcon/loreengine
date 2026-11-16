@@ -1,0 +1,20 @@
+{
+  "name": "@loreengine/player",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@loreengine/schema": "*",
+    "@loreengine/hexmath": "*",
+    "@loreengine/algorithms": "*",
+    "@loreengine/runtime": "*",
+    "@loreengine/storage": "*",
+    "@loreengine/render": "*",
+    "@loreengine/audio": "*",
+    "@loreengine/fixtures": "*"
+  }
+}
