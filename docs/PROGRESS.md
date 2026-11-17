@@ -32,7 +32,7 @@ Totals: 489 tests in 31 files, plus the browser checks. `npm run gates` exits 0.
 
 ## Bench numbers (measured)
 
-Measured in this session's cloud container, not on E's machine. Re-run the tick bench and the browser checks with:
+Measured in this session's cloud container, not on E's machine. Re-run the tick bench, the browser checks, and the render bench on a GPU (D191) with:
 
 ```bash
 npm run bench
@@ -40,6 +40,10 @@ npm run bench
 
 ```bash
 npm run build && npm run check:browser
+```
+
+```bash
+npm run bench:render
 ```
 
 | Budget (spec 9.1) | Target | Measured | Notes |
@@ -73,7 +77,7 @@ See `docs/DECISIONS_LOG.md`, section **Needs E** (N1–N9). **N6 is the one to r
 
 1. **The review gates.** The render spike (`docs/spike/README.md`) and the editor (`docs/editor/README.md`) have screenshots and notes for review.
 2. **Needs E** in `docs/DECISIONS_LOG.md`, N1 to N9: N6 (wide ramps) first, then N9 (the editor owns the baked art and one playtest renderer, a §9.3 scope change).
-3. **The budgets on E's machine.** The tick bench (`npm run bench`) and the render bench (`npm run build && npm run check:browser`) were measured in this cloud container with software WebGL. The 8 ms render budget needs a run with a GPU.
+3. **The budgets on E's machine.** The tick bench (`npm run bench`) and the render bench were measured in this cloud container with software WebGL. The 8 ms render budget needs `npm run build && npm run bench:render` on a machine with a GPU; it prints the WebGL renderer it used.
 4. **Tags.** `chunk-1-green` to `chunk-9-green` exist only in this session's clone (tag pushes were refused all session, N5); the green commits are listed by SHA in the table above, and E can tag them.
 
 If work continues before Phase 6, the smallest useful items are in Known issues: the unmasked occlusion silhouette (D151), outline flashing (D152), map creation and resizing in the editor (D175), and code splitting for the editor bundle.

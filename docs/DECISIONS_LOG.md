@@ -294,3 +294,7 @@ Started at E's request after the hard stop ("you only used like 9% of your 5-hou
 - **D188 — Placement overrides use the generated component form,** sections added and removed as on archetypes, replacing chunk 8's JSON box (D171). Apply is one canvas command (undoable), because placements are canvas edits. *(§8.5, §8.6)*
 - **D189 — Trigger editor:** the open map's triggers and the project's global triggers, each list labeled "When <event>", each trigger a generated `when` / `given` / `then` form. A region event on a global trigger is refused at Save by the project check. *(§8.6)*
 - **D190 — Left out of chunk 9:** a "used by" index for friendlier delete messages (the project check's message is shown); undo for database edits (the spec says Save and Cancel); map creation and resizing (D175). *(§8.6)*
+
+## After chunk 9 — E's checks on E's machine
+
+- **D191 — Tooling for running the checks outside the cloud container.** Playwright (1.63.0, the version the container's browser was built for) is now a dev dependency, and `package.json` says Node 22 or newer; the container had Playwright preinstalled, which hid that the repo did not list it. The browser checks gained `--bench-only` (skip the leak gates) and `--gpu` (the render bench in a visible Chromium on the machine's GPU, without SwiftShader), combined as `npm run bench:render`. The bench now prints the WebGL renderer it ran on and marks a software renderer, so a number measured without a GPU cannot pass for one. A root README has the set-up and run commands. *(§9.1, D158)*

@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "typecheck": "node tools/typecheck.mjs",
     "build": "npm run build -w @loreengine/player && npm run build -w @loreengine/editor",
@@ -11,12 +13,17 @@
     "lint:random": "node tools/ban-math-random.mjs",
     "bench": "vitest run packages/runtime/test/budget.test.ts --disableConsoleIntercept",
     "check:browser": "node tools/browser-checks.mjs",
-    "gates": "npm run typecheck && npm run build && npm run lint:random && npm run test && npm run check:browser"
+    "gates": "npm run typecheck && npm run build && npm run lint:random && npm run test && npm run check:browser",
+    "bench:render": "node tools/browser-checks.mjs --bench-only --gpu"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.0.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "playwright": "1.63.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

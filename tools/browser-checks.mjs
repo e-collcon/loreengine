@@ -12,6 +12,9 @@
 //   3. Render bench: frame time on a 128 x 128 map, full viewport. It measures
 //      and reports; the 8 ms figure is a target to verify.
 // Usage: npm run build && npm run check:browser (part of `npm run gates`)
+//   --bench-only   skip the leak gates and the database smoke test
+//   --gpu          run the render bench in a visible Chromium on this machine's GPU,
+//                  not software WebGL (npm run bench:render does both)
 // Exits non-zero if a gate fails.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -22,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 
+const BENCH_ONLY = process.argv.includes('--bench-only');
+const GPU = process.argv.includes('--gpu');
 const CYCLES = Number(process.env.LEAK_CYCLES ?? 50);
 const WARM_CYCLES = 10; // heap baseline is taken after these, once caches and JIT have settled
 const HEAP_TOLERANCE = 0.05;
@@ -45,9 +50,11 @@ await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 
 const problems = [];
-const GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
-async function launch(args) {
-  const b = await chromium.launch({ args: [...GL, ...args] });
+// Software WebGL everywhere, so the checks run the same in a container without a GPU.
+const SOFTWARE_GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+async function launch(args, gpu = false) {
+  // On the GPU: a visible window (headless Chromium may fall back to software), and no SwiftShader.
+  const b = await chromium.launch(gpu ? { headless: false, args } : { args: [...SOFTWARE_GL, ...args] });
   const p = await b.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   p.on('console', (m) => {
     if (m.type() === 'error' || m.type() === 'warning') problems.push(`${m.type()}: ${m.text()}`);
@@ -58,7 +65,7 @@ async function launch(args) {
 // The leak gates: --stress-flush-code makes V8 drop compiled code at every full GC, so the heap
 // gates measure retained objects, not JIT code V8 would reclaim later anyway (D161). It slows
 // code down, so the render bench runs in a second browser without it.
-let { b: browser, p: page } = await launch(['--js-flags=--stress-flush-code']);
+let { b: browser, p: page } = await launch(BENCH_ONLY ? [] : ['--js-flags=--stress-flush-code']);
 
 // The page's JS heap after a full GC, to the byte (performance.memory is bucketed and too coarse for a 5% gate).
 const cdp = await page.context().newCDPSession(page);
@@ -71,6 +78,7 @@ const failures = [];
 const mb = (n) => (n / 1048576).toFixed(2);
 const pct = (n) => `${(n * 100).toFixed(1)}%`;
 
+if (!BENCH_ONLY) {
 /* ---- 1. the editor's playtest: the spec's leak gate ----------------------- */
 {
   await page.goto(`${origin}/editor/`);
@@ -179,12 +187,22 @@ console.log(`  while playing: up to ${peakTextures} textures, ${peakAudioNodes} 
 console.log(`  after every stop: textures ${baseline.textures}, audio nodes ${baseline.audioNodes}, canvases ${baseline.canvases} (baseline)`);
 console.log(`  heap after GC: ${mb(heapBaseline)} MB at cycle ${WARM_CYCLES}, ${mb(heapEnd)} MB at cycle ${CYCLES} (${pct(heapGrowth)}; reported, not gated: each start bakes its own art, N9)`);
 
+}
+
 /* ---- 3. render bench ------------------------------------------------------ */
 await browser.close();
-({ b: browser, p: page } = await launch([]));
+({ b: browser, p: page } = await launch([], GPU));
 await page.goto(`${origin}/player/bench.html`);
 await page.waitForFunction(() => window.__bench !== undefined, null, { timeout: 30_000 });
-console.log('render bench: 128 x 128 map, 1280 x 800 viewport, software WebGL (SwiftShader) in headless Chromium');
+const glRenderer = await page.evaluate(() => {
+  const gl = document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
+  if (!gl) return 'no WebGL';
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  return String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+});
+const software = /swiftshader|llvmpipe|software/i.test(glRenderer);
+console.log(`render bench: 128 x 128 map, 1280 x 800 viewport, ${GPU ? 'visible' : 'headless'} Chromium`);
+console.log(`  WebGL renderer: ${glRenderer}${software ? '  (software: these numbers are not a GPU measurement)' : ''}`);
 const line = (label, r) =>
   console.log(`  ${label}: mean ${r.meanMs.toFixed(2)} ms, p50 ${r.p50Ms.toFixed(1)} ms, p99 ${r.p99Ms.toFixed(1)} ms, max ${r.maxMs.toFixed(1)} ms over ${r.frames} frames (${r.rows} rows on screen, ${r.strips} strips built)`);
 for (const zoom of [1, 0.5]) {
@@ -192,8 +210,8 @@ for (const zoom of [1, 0.5]) {
   if (process.env.BENCH_SHOT) await page.screenshot({ path: `${process.env.BENCH_SHOT}-zoom-${zoom}.png` });
   // CPU side only: building and submitting the frame. The GPU's share cannot be measured here.
   line(`zoom ${zoom}, frame build and submit`, await page.evaluate(() => window.__bench.renderRun(600, false)));
-  // With gl.finish: adds SwiftShader rasterizing the frame on the CPU, far slower than any GPU.
-  line(`zoom ${zoom}, including software rasterization`, await page.evaluate(() => window.__bench.renderRun(300, true)));
+  // With gl.finish: adds rasterizing the frame (on the GPU, or on the CPU under SwiftShader).
+  line(`zoom ${zoom}, including rasterization`, await page.evaluate(() => window.__bench.renderRun(300, true)));
   await page.evaluate(() => window.__bench.stop());
 }
 
