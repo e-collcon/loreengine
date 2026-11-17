@@ -3,7 +3,7 @@
  * `@loreengine/runtime/view`: it reads runtime state and events and can
  * reach no mutating call.
  */
-export { PixiRenderer } from './pixi.ts';
+export { PixiRenderer, SharedArt, hitboxOutline } from './pixi.ts';
 export type { RendererOptions, AssetResolver } from './pixi.ts';
 export { DrawList, ITEM_STRIP, ITEM_ENTITY } from './drawlist.ts';
 export { pickTerrain, pickEntity } from './picking.ts';

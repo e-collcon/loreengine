@@ -7,6 +7,7 @@
  */
 import { AudioMixer, soundsForMap } from '@loreengine/audio';
 import { Feedback, PixiRenderer, bakeAtlas, browserBakeTools, followCamera } from '@loreengine/render';
+import type { SharedArt } from '@loreengine/render';
 import type { Raster, TerrainPick } from '@loreengine/render';
 import { MS_PER_TICK, ROLE_BITS, createRuntime } from '@loreengine/runtime';
 import type { ClickAction, ClickOrder, Runtime } from '@loreengine/runtime';
@@ -38,6 +39,33 @@ export interface ClientOptions {
   zoom?: number;
   /** Called after each rendered frame. */
   onFrame?: (client: Client) => void;
+  /**
+   * Already-baked art to draw from instead of baking at startup: the editor
+   * bakes once and every playtest borrows it (DECISIONS N9). The client never
+   * destroys it.
+   */
+  art?: SharedArt;
+}
+
+/** The project's vector sources baked into atlases and their pages (spec 6.7), in the browser. */
+export async function bakeProjectArt(project: Project, resolve: (ref: AssetRef) => Promise<Uint8Array | null>): Promise<{ atlases: AtlasDef[]; pages: Map<string, Raster> }> {
+  const decoder = new TextDecoder();
+  const atlases: AtlasDef[] = [];
+  const pages = new Map<string, Raster>();
+  const tools = browserBakeTools(async (bytes, mime, extra) => ({ blobId: sha256HexSync(bytes), mime, byteSize: bytes.length, ...extra }));
+  for (const atlas of project.assets.atlases) {
+    const sources = [];
+    for (const sourceId of atlas.sourceIds) {
+      const asset = project.assets.vectorSources.find((a) => a.id === sourceId);
+      const bytes = asset ? await resolve(asset.ref) : null;
+      if (asset && bytes) sources.push({ assetId: asset.id, name: asset.name, svg: decoder.decode(bytes) });
+    }
+    if (sources.length === 0) continue;
+    const result = await bakeAtlas(atlas.id, sources, tools);
+    atlases.push(...result.atlases);
+    for (const [blobId, raster] of result.pages) pages.set(blobId, raster);
+  }
+  return { atlases, pages };
 }
 
 export interface Client {
@@ -59,6 +87,8 @@ export interface Client {
   paused: boolean;
   /** Frames rendered and ticks simulated so far. */
   readonly frames: number;
+  /** Mean milliseconds per simulated tick over the last frame that ran any (the debug readout). */
+  readonly tickMs: number;
   /** Render one frame now, without advancing time (used for screenshots). */
   renderNow(): void;
   stop(): void;
@@ -101,26 +131,15 @@ export async function startClient(options: ClientOptions): Promise<Client> {
   const hud = new Hud(host, view);
   const interactKey = (project.inputActions.find((a) => a.role === 'interact')?.defaultBindings[0] ?? '').replace(/^Key/, '');
 
-  // Bake the project's vector sources into atlases (spec 6.7). Until that finishes, and for
-  // any frame with no source, the renderer draws its placeholder shapes.
-  const decoder = new TextDecoder();
-  const baked: AtlasDef[] = [];
-  const pages = new Map<string, Raster>();
+  // Bake the project's vector sources into atlases (spec 6.7), unless the caller lends baked art.
+  // Until that finishes, and for any frame with no source, the renderer draws its placeholder shapes.
   const bakeAll = async (): Promise<void> => {
-    const tools = browserBakeTools(async (bytes, mime, extra) => ({ blobId: sha256HexSync(bytes), mime, byteSize: bytes.length, ...extra }));
-    for (const atlas of project.assets.atlases) {
-      const sources = [];
-      for (const sourceId of atlas.sourceIds) {
-        const asset = project.assets.vectorSources.find((a) => a.id === sourceId);
-        const bytes = asset ? await resolve(asset.ref) : null;
-        if (asset && bytes) sources.push({ assetId: asset.id, name: asset.name, svg: decoder.decode(bytes) });
-      }
-      if (sources.length === 0) continue;
-      const result = await bakeAtlas(atlas.id, sources, tools);
-      baked.push(...result.atlases);
-      for (const [blobId, raster] of result.pages) pages.set(blobId, raster);
+    if (options.art) {
+      renderer.useSharedArt(options.art);
+      return;
     }
-    if (!stopped && baked.length > 0) renderer.setAtlases(baked, pages);
+    const baked = await bakeProjectArt(project, resolve);
+    if (!stopped && baked.atlases.length > 0) renderer.setAtlases(baked.atlases, baked.pages);
   };
   let mapId = view.currentMapId;
 
@@ -130,6 +149,7 @@ export async function startClient(options: ClientOptions): Promise<Client> {
   let hoverEntity = -1;
   let lastPick: TerrainPick | null = null;
   let frames = 0;
+  let tickMs = 0;
   let stopped = false;
   const scratch: TerrainPick = { cell: -1, x: 0, y: 0, z: 0 };
 
@@ -229,6 +249,9 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     get frames() {
       return frames;
     },
+    get tickMs() {
+      return tickMs;
+    },
     renderNow() {
       renderer.render(1, feedback);
       frames++;
@@ -257,6 +280,8 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     accumulator += elapsed;
     last = now;
     let ticks = 0;
+    let simulated = 0;
+    const simStart = performance.now();
     while (accumulator >= MS_PER_TICK && ticks < MAX_TICKS_PER_FRAME) {
       accumulator -= MS_PER_TICK;
       ticks++;
@@ -269,7 +294,9 @@ export async function startClient(options: ClientOptions): Promise<Client> {
         heldTicks = 0;
       }
       runtime.tick(inputFrame);
+      simulated++;
     }
+    if (simulated > 0) tickMs = (performance.now() - simStart) / simulated;
     // A stall longer than five ticks is dropped, not replayed.
     if (accumulator >= MS_PER_TICK) accumulator = 0;
     if (client.follow) {

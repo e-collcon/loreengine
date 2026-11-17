@@ -1,24 +1,21 @@
+/**
+ * The LoreEngine editor (spec section 8): a client of the runtime that edits
+ * the project document and playtests clones of it.
+ */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { buildEmberfall } from '@loreengine/fixtures';
-import { checkProject } from '@loreengine/schema';
+import { App } from './ui/App.tsx';
+import { EditorSession } from './ui/session.ts';
+import './ui/styles.css';
 
-function App() {
-  const project = buildEmberfall();
-  const issues = checkProject(project);
-  return (
-    <main style={{ padding: 24 }}>
-      <h1>LoreEngine Editor</h1>
-      <p>
-        {project.name}: {project.maps.length} map(s), {project.archetypes.length} archetypes, {issues.length} validation issue(s).
-      </p>
-      <p>The editor shell arrives in chunk 8 (Phase 5).</p>
-    </main>
-  );
-}
-
-createRoot(document.getElementById('app')!).render(
+const root = createRoot(document.getElementById('app')!);
+root.render(<p className="loading">Opening the project…</p>);
+const session = await EditorSession.open();
+// Bake the art once; the canvas and every playtest borrow it (DECISIONS N9).
+void session.bakeArt().catch((error) => console.warn('LoreEngine: the art bake failed; placeholder shapes stay.', error));
+window.addEventListener('beforeunload', () => void session.saveNow());
+root.render(
   <StrictMode>
-    <App />
+    <App session={session} />
   </StrictMode>,
 );

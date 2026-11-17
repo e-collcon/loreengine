@@ -1,0 +1,58 @@
+:root {
+  --cream: #f6f1e4;
+  --cream-2: #ece5d3;
+  --cream-3: #ddd4bd;
+  --ink: #1d1b16;
+  --ink-2: #4a463c;
+  --ink-3: #7b7563;
+  --accent: #c2410c;
+  --accent-ink: #fff7ed;
+  --good: #15803d;
+  --warn: #b45309;
+  --panel: 264px;
+  --inspector: 300px;
+  font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+}
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; }
+button, select, input, textarea { font: inherit; color: inherit; }
+.shell { display: grid; grid-template-rows: 44px 1fr 26px; grid-template-columns: var(--panel) 1fr var(--inspector); height: 100%; }
+.topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid var(--cream-3); background: var(--cream); overflow-x: auto; }
+.topbar .brand { font-weight: 700; letter-spacing: 0.02em; margin-right: 8px; white-space: nowrap; }
+.topbar .sep { width: 1px; height: 22px; background: var(--cream-3); margin: 0 4px; flex: none; }
+.btn { border: 1px solid var(--cream-3); background: #fffdf7; border-radius: 6px; padding: 4px 9px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--cream-2); }
+.btn[aria-pressed='true'] { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.small { padding: 2px 7px; font-size: 12px; }
+.panel { overflow-y: auto; border-right: 1px solid var(--cream-3); background: var(--cream); }
+.inspector { overflow-y: auto; border-left: 1px solid var(--cream-3); background: var(--cream); }
+.section { padding: 10px 12px; border-bottom: 1px solid var(--cream-2); }
+.section h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 0 0 6px; font-weight: 600; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 5px; cursor: pointer; }
+.list li:hover { background: var(--cream-2); }
+.list li[aria-selected='true'] { background: var(--ink); color: var(--cream); }
+.list li .meta { margin-left: auto; color: var(--ink-3); font-size: 11px; }
+.list li[aria-selected='true'] .meta { color: var(--cream-3); }
+.swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.25); flex: none; }
+.warning { color: var(--warn); }
+.muted { color: var(--ink-3); }
+.canvas-host { position: relative; overflow: hidden; background: #1b1d22; }
+.statusbar { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; padding: 0 10px; border-top: 1px solid var(--cream-3); font-size: 12px; color: var(--ink-2); background: var(--cream-2); white-space: nowrap; overflow: hidden; }
+.field { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 6px; margin-bottom: 6px; }
+.field label { color: var(--ink-2); font-size: 12px; }
+.field input, .field select { width: 100%; border: 1px solid var(--cream-3); border-radius: 5px; padding: 3px 6px; background: #fffdf7; }
+textarea.json { width: 100%; min-height: 160px; border: 1px solid var(--cream-3); border-radius: 5px; padding: 6px; background: #fffdf7; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+.error { color: #b91c1c; font-size: 12px; white-space: pre-wrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.playtest { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: 40px 1fr; background: #14161a; }
+.playtest .bar { display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--ink); color: var(--cream); overflow-x: auto; }
+.playtest .bar .btn { background: transparent; color: var(--cream); border-color: #5b5648; }
+.playtest .bar .btn[aria-pressed='true'] { background: var(--cream); color: var(--ink); }
+.playtest .bar .readout { margin-left: auto; font: 12px ui-monospace, Menlo, monospace; color: var(--cream-3); white-space: nowrap; }
+.playtest .stage { position: relative; overflow: hidden; }
+.loading { display: grid; place-items: center; height: 100%; color: var(--ink-2); }

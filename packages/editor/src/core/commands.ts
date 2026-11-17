@@ -204,3 +204,19 @@ export class CommandStack {
     this.undone.length = 0;
   }
 }
+
+/** Moves or turns the map's player start (the Select tool on the start marker). */
+export class SetPlayerStart implements Command {
+  readonly label = 'Move player start';
+  constructor(
+    readonly mapId: string,
+    readonly before: MapDef['playerStart'],
+    readonly after: MapDef['playerStart'],
+  ) {}
+  apply(project: Project): void {
+    mapOf(project, this.mapId).playerStart = this.after ? { ...this.after } : undefined;
+  }
+  revert(project: Project): void {
+    mapOf(project, this.mapId).playerStart = this.before ? { ...this.before } : undefined;
+  }
+}

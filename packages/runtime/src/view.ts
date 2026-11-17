@@ -19,7 +19,7 @@ export type { DiagnosticEntry } from './diagnostics.ts';
 export type { ClockMode, Outcome } from './sim.ts';
 export type { ClickAction } from './orders.ts';
 export type { CastOptions, CastResult, Vec3 } from './sight.ts';
-export { NO_ENTITY, MAX_ENTITIES } from './entities.ts';
+export { NO_ENTITY, MAX_ENTITIES, PHASE_NONE, PHASE_WINDUP, PHASE_ACTIVE, PHASE_RECOVERY } from './entities.ts';
 export { PRESENTATION_KINDS } from './presentation.ts';
 export { TICK_HZ, MS_PER_TICK, SECONDS_PER_TICK } from './time.ts';
 

@@ -9,7 +9,7 @@
  * arrive with the rest of Phase 3B.
  */
 import { Application, Container, Graphics, Mesh, MeshGeometry, Rectangle, Sprite, Texture } from 'pixi.js';
-import type { AnimationSetDef, AssetRef, AtlasDef } from '@loreengine/schema';
+import type { AnimationSetDef, AssetRef, AtlasDef, AttackDef } from '@loreengine/schema';
 import type { RuntimeView } from '@loreengine/runtime/view';
 import { spriteFrame } from './animation.ts';
 import { AtlasIndex } from './atlas.ts';
@@ -63,6 +63,61 @@ const TOP_UV: readonly [number, number][] = [[0.5, 0.5], ...Array.from({ length:
   return [0.5 + Math.cos(a) / Math.sqrt(3), 0.5 + Math.sin(a) / 2];
 })];
 
+/** Atlas pages as textures, owned by whoever made them; renderers borrow them (`useSharedArt`). */
+export class SharedArt {
+  readonly pages = new Map<string, Texture>();
+  private destroyed = false;
+
+  constructor(
+    readonly atlases: readonly AtlasDef[],
+    pages: ReadonlyMap<string, Raster>,
+  ) {
+    for (const [blobId, raster] of pages) this.pages.set(blobId, Texture.from(rasterToCanvas(raster)));
+  }
+
+  get size(): number {
+    return this.pages.size;
+  }
+
+  /** Only once no renderer draws from it any more. */
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    for (const texture of this.pages.values()) texture.destroy(true);
+    this.pages.clear();
+  }
+}
+
+/**
+ * A hitbox's outline on the ground, as world (x, y) pairs written into `out`,
+ * for an attacker at (x, y) facing `facing`. Returns the number of points.
+ * The telegraph and the editor's debug overlay draw the same shape.
+ */
+export function hitboxOutline(h: AttackDef['hitbox'], x: number, y: number, facing: number, out: number[]): number {
+  out.length = 0;
+  const at = (px: number, py: number): void => void out.push(px, py);
+  if (h.shape === 'arc') {
+    const half = (h.arcDeg * Math.PI) / 360;
+    if (h.arcDeg < 360) at(x, y);
+    for (let k = 0; k <= 24; k++) {
+      const a = facing - half + (2 * half * k) / 24;
+      at(x + Math.cos(a) * h.range, y + Math.sin(a) * h.range);
+    }
+  } else if (h.shape === 'circle') {
+    const cx = x + Math.cos(facing) * h.offset;
+    const cy = y + Math.sin(facing) * h.offset;
+    for (let k = 0; k < 32; k++) at(cx + Math.cos((k * Math.PI) / 16) * h.radius, cy + Math.sin((k * Math.PI) / 16) * h.radius);
+  } else {
+    const nx = -Math.sin(facing) * (h.width / 2);
+    const ny = Math.cos(facing) * (h.width / 2);
+    at(x + nx, y + ny);
+    at(x + Math.cos(facing) * h.length + nx, y + Math.sin(facing) * h.length + ny);
+    at(x + Math.cos(facing) * h.length - nx, y + Math.sin(facing) * h.length - ny);
+    at(x - nx, y - ny);
+  }
+  return out.length / 2;
+}
+
 export class PixiRenderer {
   readonly camera: Camera;
   readonly drawList = new DrawList();
@@ -71,6 +126,8 @@ export class PixiRenderer {
   private readonly sprites = new Map<number, EntitySprite>();
   private atlas: AtlasIndex | null = null;
   private readonly pages = new Map<string, Texture>();
+  /** Pages from a `SharedArt`: drawn from, never destroyed here. */
+  private readonly borrowed = new Set<string>();
   private readonly frames = new Map<string, Texture>();
   private readonly setById = new Map<string, AnimationSetDef>();
   private readonly particles: Sprite[] = [];
@@ -79,6 +136,7 @@ export class PixiRenderer {
   private readonly indicator = new Graphics();
   private readonly highlight = new Graphics();
   private readonly metrics = { width: 0, height: 0 };
+  private readonly outline: number[] = [];
   private mapId = '';
   private top = 0;
   private highlighted = -1;
@@ -133,11 +191,34 @@ export class PixiRenderer {
    * engine placeholder shape.
    */
   setAtlases(atlases: readonly AtlasDef[], pages: ReadonlyMap<string, Raster>): void {
+    this.dropPages();
+    for (const [blobId, raster] of pages) this.pages.set(blobId, Texture.from(rasterToCanvas(raster)));
+    this.useAtlases(atlases);
+  }
+
+  /**
+   * Draw from art someone else owns (the editor's, shared by every playtest:
+   * DECISIONS N9). The renderer never destroys these pages, so their texture
+   * ids stay the same from one renderer to the next.
+   */
+  useSharedArt(art: SharedArt): void {
+    this.dropPages();
+    for (const [blobId, texture] of art.pages) {
+      this.pages.set(blobId, texture);
+      this.borrowed.add(blobId);
+    }
+    this.useAtlases(art.atlases);
+  }
+
+  private dropPages(): void {
     for (const texture of this.frames.values()) texture.destroy(false);
-    for (const texture of this.pages.values()) texture.destroy(true);
+    for (const [blobId, texture] of this.pages) if (!this.borrowed.has(blobId)) texture.destroy(true);
     this.frames.clear();
     this.pages.clear();
-    for (const [blobId, raster] of pages) this.pages.set(blobId, Texture.from(rasterToCanvas(raster)));
+    this.borrowed.clear();
+  }
+
+  private useAtlases(atlases: readonly AtlasDef[]): void {
     this.atlas = new AtlasIndex(atlases);
     this.invalidateTerrain();
     for (const sprite of this.sprites.values()) sprite.root.destroy({ children: true });
@@ -295,27 +376,8 @@ export class PixiRenderer {
         const ez = entities.z(ind.entity);
         const f = entities.facing(ind.entity);
         const points: number[] = [];
-        const at = (x: number, y: number): void => void points.push(projectX(x, ppu), projectY(y, ez, ppu));
-        const h = ind.hitbox;
-        if (h.shape === 'arc') {
-          const half = (h.arcDeg * Math.PI) / 360;
-          if (h.arcDeg < 360) at(ex, ey);
-          for (let k = 0; k <= 24; k++) {
-            const a = f - half + (2 * half * k) / 24;
-            at(ex + Math.cos(a) * h.range, ey + Math.sin(a) * h.range);
-          }
-        } else if (h.shape === 'circle') {
-          const cx = ex + Math.cos(f) * h.offset;
-          const cy = ey + Math.sin(f) * h.offset;
-          for (let k = 0; k < 32; k++) at(cx + Math.cos((k * Math.PI) / 16) * h.radius, cy + Math.sin((k * Math.PI) / 16) * h.radius);
-        } else {
-          const nx = -Math.sin(f) * (h.width / 2);
-          const ny = Math.cos(f) * (h.width / 2);
-          at(ex + nx, ey + ny);
-          at(ex + Math.cos(f) * h.length + nx, ey + Math.sin(f) * h.length + ny);
-          at(ex + Math.cos(f) * h.length - nx, ey + Math.sin(f) * h.length - ny);
-          at(ex - nx, ey - ny);
-        }
+        const outline = hitboxOutline(ind.hitbox, ex, ey, f, this.outline);
+        for (let k = 0; k < outline; k++) points.push(projectX(this.outline[k * 2]!, ppu), projectY(this.outline[k * 2 + 1]!, ez, ppu));
         const progress = 1 - ind.msLeft / ind.msTotal;
         g.poly(points).fill({ color: 0xff3b30, alpha: 0.18 + 0.3 * progress }).stroke({ color: 0xff6b5e, width: 2, alpha: 0.9 });
         const row = list.sortRow[ind.entity]! & 255;
@@ -508,7 +570,7 @@ export class PixiRenderer {
 
   /** Counts the playtest leak gate compares (spec 9.5). */
   stats(): { strips: number; sprites: number; children: number; textures: number } {
-    return { strips: this.strips.size, sprites: this.sprites.size, children: this.world.children.length, textures: this.pages.size + this.frames.size };
+    return { strips: this.strips.size, sprites: this.sprites.size, children: this.world.children.length, textures: this.pages.size - this.borrowed.size + this.frames.size };
   }
 
   destroy(): void {
@@ -518,9 +580,6 @@ export class PixiRenderer {
     this.sprites.clear();
     // The scene and the renderer go first, so no shader still has a page bound when the pages are destroyed.
     this.app.destroy(false, { children: true });
-    for (const texture of this.frames.values()) texture.destroy(false);
-    for (const texture of this.pages.values()) texture.destroy(true);
-    this.frames.clear();
-    this.pages.clear();
+    this.dropPages();
   }
 }
