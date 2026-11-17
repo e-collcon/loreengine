@@ -35,7 +35,8 @@ export interface GainLike {
 export interface SourceLike {
   buffer: unknown;
   loop: boolean;
-  onended: (() => void) | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the DOM hands this an Event; a fake hands it nothing
+  onended: ((event?: any) => unknown) | null;
   connect(destination: unknown): unknown;
   disconnect(): void;
   start(when?: number): void;

@@ -39,6 +39,8 @@ const scenes = [
   ['05-terraces-overview', 'fixture=elevation&focus=8,5&zoom=0.95'],
   ['06-emberfall-plateau', 'focus=22,9&zoom=0.8'],
   ['07-emberfall-overview', 'focus=24,15&zoom=0.5'],
+  // Chunk 7: the boss winds up its slam; the telegraph is the hitbox on the ground.
+  ['08-boss-telegraph', 'start=38,22&zoom=1', 700],
 ];
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -49,11 +51,13 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => problems.push(String(e)));
 
-for (const [name, query] of scenes) {
+for (const [name, query, waitMs] of scenes) {
   await page.goto(`${base}?${query}`);
-  await page.waitForFunction(() => window.__lore?.ready === true, null, { timeout: 30_000 });
+  // `ready` is set once the art has been baked into atlases.
+  await page.waitForFunction(() => window.__lore?.ready === true, null, { timeout: 60_000 });
   // Let a few frames render so the camera and sprites have settled.
   await page.waitForFunction(() => window.__lore.client.frames > 6, null, { timeout: 30_000 });
+  if (waitMs) await page.waitForTimeout(waitMs);
   const info = await page.evaluate(() => {
     const c = window.__lore.client;
     const v = c.runtime.view;

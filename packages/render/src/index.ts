@@ -37,3 +37,4 @@ export type { SpriteFrame } from './animation.ts';
 export { Feedback, MAX_PARTICLES, MAX_SHAKE, MAX_INDICATORS } from './feedback.ts';
 export type { AudioSink, GroundIndicator } from './feedback.ts';
 export { isOccluded, silhouettes, MAX_SILHOUETTES } from './silhouette.ts';
+export { browserBakeTools, rasterToCanvas } from './bake-browser.ts';

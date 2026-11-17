@@ -5,11 +5,12 @@
  *   ?zoom=1.5              initial zoom, 0.5 .. 2
  *   ?focus=8,6             center the camera on a cell and stop following the player
  *   ?pick=8,4              pick the terrain under that cell's top, as a click there would
+ *   ?start=37,22           start the player on that cell
  *   ?hud=0                 hide the debug readout
  *
  * `window.__lore` exposes the client for the spike screenshot script.
  */
-import { buildElevation, buildEmberfall } from '@loreengine/fixtures';
+import { buildElevation, buildEmberfall, cellCenter, emberfallBlobs } from '@loreengine/fixtures';
 import { screenX, screenY } from '@loreengine/render';
 import type { TerrainPick } from '@loreengine/render';
 import { startClient } from './client.ts';
@@ -32,9 +33,18 @@ const marker = document.createElement('div');
 marker.style.cssText =
   'position:fixed;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid #fff27a;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.6);pointer-events:none;display:none';
 
+// ?start=col,row moves the player's start (for demos and screenshots).
+const startAt = params.get('start')?.split(',').map(Number);
+if (startAt && startAt.length === 2) {
+  const c = cellCenter(startAt[0]!, startAt[1]!);
+  project.maps[0]!.playerStart = { x: c.x, y: c.y, facing: 0 };
+}
+const blobs = emberfallBlobs();
+
 const client = await startClient({
   host,
   project,
+  resolveAsset: async (ref) => blobs.get(ref.blobId)?.bytes ?? null,
   seed: Number(params.get('seed') ?? 1),
   zoom: params.has('zoom') ? Number(params.get('zoom')) : 1,
   onFrame: (c) => {
