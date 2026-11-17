@@ -178,6 +178,7 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
     },
     variable: (id) => sim.variables.get(id),
     clickAction: (entity) => clickAction(sim, sim.playerIndex(), e.indexOf(entity)),
+    interactTarget: () => sim.orders.interactable(sim.playerIndex()),
     castSegment: (from, to, opts) => sim.sight.castSegment(from, to, opts),
     canSee: (a, b) => {
       const ia = e.indexOf(a);

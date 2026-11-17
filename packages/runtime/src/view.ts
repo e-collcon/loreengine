@@ -135,6 +135,8 @@ export interface RuntimeView {
    * tells the truth about the click.
    */
   clickAction(entity: EntityId): ClickAction;
+  /** The entity index the interact key would use right now, or -1: the HUD shows its prompt. */
+  interactTarget(): number;
   /** The one 3D segment cast (spec 7.6), for debug overlays. */
   castSegment(from: Vec3, to: Vec3, opts: CastOptions): CastResult;
   /** Can entity `a` see entity `b`, by range, line of sight, and the high-ground rule? */

@@ -239,7 +239,10 @@ describe('[P2.storage.file] the .loreengine file', () => {
     const source = await open();
     const { project, blobId } = await projectWithBlob(source, 'atlas page bytes');
     const { bytes, missing } = await exportProjectFile(project, source);
-    expect(missing).toEqual([EMPTY_BLOB_ID]); // the unbaked placeholder atlas page
+    // Not in this store: the unbaked placeholder atlas page, and the fixture's generated art and sound.
+    expect(missing).toContain(EMPTY_BLOB_ID);
+    expect(missing).not.toContain(blobId);
+    expect(missing).toHaveLength(referencedBlobIds(project).size - 1);
     const files = unzipSync(bytes);
     expect(Object.keys(files).sort()).toEqual([`blobs/${blobId}`, 'project.json']);
 
@@ -273,6 +276,13 @@ describe('[P2.storage.file] the .loreengine file', () => {
   it('referencedBlobIds lists every asset and atlas page', async () => {
     const storage = await open();
     const { project, blobId } = await projectWithBlob(storage);
-    expect([...referencedBlobIds(project)].sort()).toEqual([blobId, EMPTY_BLOB_ID].sort());
+    const ids = referencedBlobIds(project);
+    expect(ids.has(blobId)).toBe(true); //         an image
+    expect(ids.has(EMPTY_BLOB_ID)).toBe(true); //  the atlas pages
+    for (const asset of [...project.assets.vectorSources, ...project.assets.audio]) expect(ids.has(asset.ref.blobId)).toBe(true);
+    // Content-addressed: frames with identical art (two attacks sharing a pose) share one blob.
+    const unique = new Set([...project.assets.vectorSources, ...project.assets.audio].map((a) => a.ref.blobId));
+    expect(ids.size).toBe(1 + 1 + unique.size);
+    expect(unique.size).toBeLessThan(project.assets.vectorSources.length + project.assets.audio.length);
   });
 });

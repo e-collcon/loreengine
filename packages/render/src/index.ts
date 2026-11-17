@@ -28,3 +28,12 @@ export { buildStrip, maxSurface, CAMERA_FACING, TOP_INDICES } from './terrain.ts
 export type { StripGeometry, TopMesh, FaceQuad } from './terrain.ts';
 export { spriteMetrics, footprintRadius, colorOf, shade } from './sprites.ts';
 export type { SpriteMetrics } from './sprites.ts';
+export { AtlasIndex, pickTier } from './atlas.ts';
+export type { AtlasFrame, AtlasTier } from './atlas.ts';
+export { bakeAtlas, frameNameOf, packFrames, svgAnchor, svgSize, MAX_PAGE, TIER_SCALES } from './bake.ts';
+export type { BakeResult, BakeTools, Raster, SvgSource, Placement } from './bake.ts';
+export { directionRow, nearestDirection, spriteFrame } from './animation.ts';
+export type { SpriteFrame } from './animation.ts';
+export { Feedback, MAX_PARTICLES, MAX_SHAKE, MAX_INDICATORS } from './feedback.ts';
+export type { AudioSink, GroundIndicator } from './feedback.ts';
+export { isOccluded, silhouettes, MAX_SILHOUETTES } from './silhouette.ts';

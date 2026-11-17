@@ -116,7 +116,7 @@ export const EMPTY_BLOB_ID = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca4
  * bake replaces them; the renderer draws engine placeholder shapes for a
  * frame whose page cannot be resolved.
  */
-export function placeholderAtlas(atlasId: Id<'atlas'>, frameNames: readonly string[], cell = 64): AtlasDef {
+export function placeholderAtlas(atlasId: Id<'atlas'>, frameNames: readonly string[], sourceIds: Id<'asset'>[] = [], cell = 64): AtlasDef {
   const perRow = 16;
   const tier = (scale: 1 | 2): AtlasDef['tiers'][number] => {
     const frames: AtlasDef['tiers'][number]['frames'] = {};
@@ -138,5 +138,5 @@ export function placeholderAtlas(atlasId: Id<'atlas'>, frameNames: readonly stri
       frames,
     };
   };
-  return { id: atlasId, sourceIds: [], tiers: [tier(1), tier(2)] };
+  return { id: atlasId, sourceIds, tiers: [tier(1), tier(2)] };
 }

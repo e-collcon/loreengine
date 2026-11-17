@@ -275,7 +275,7 @@ describe('[P2.runtime.api] the runtime surface', () => {
     const rt = createRuntime(bareProject(), null, OPTS);
     const names = (o: object): string[] => Object.keys(o).sort();
     expect(names(rt.view)).toEqual(
-      ['clockMode', 'currentMapId', 'diagnostics', 'entities', 'outcome', 'pendingSteps', 'presentation', 'project', 'stateHash', 'stats', 'tick', 'variable', 'world', 'clickAction', 'castSegment', 'canSee'].sort(),
+      ['clockMode', 'currentMapId', 'diagnostics', 'entities', 'outcome', 'pendingSteps', 'presentation', 'project', 'stateHash', 'stats', 'tick', 'variable', 'world', 'clickAction', 'castSegment', 'canSee', 'interactTarget'].sort(),
     );
     for (const key of [...names(rt.view), ...names(rt.view.entities), ...names(rt.view.presentation), ...names(rt.view.diagnostics)]) {
       expect(key).not.toMatch(/^(set|spawn|despawn|enqueue|step|apply|raise|dispose|restore|write|push)/);

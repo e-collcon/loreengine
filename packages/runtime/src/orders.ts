@@ -124,9 +124,15 @@ export class Orders {
 
   /** Interact: the nearest interactable within its radius in the front half-circle. */
   private interact(p: number): void {
+    const best = this.interactable(p);
+    if (best >= 0) this.sim.bus.raise('interacted', this.sim.entities.idAt(p), this.sim.entities.idAt(best));
+  }
+
+  /** What the interact key would use right now: an entity index, or -1. The HUD's prompt asks the same question. */
+  interactable(p: number): number {
     const sim = this.sim;
     const e = sim.entities;
-    if ((e.restrict[p]! & RESTRICT_ACT) !== 0) return;
+    if (p < 0 || e.alive[p] !== 1 || (e.restrict[p]! & RESTRICT_ACT) !== 0) return -1;
     const fx = Math.cos(e.facing[p]!);
     const fy = Math.sin(e.facing[p]!);
     let best = -1;
@@ -144,7 +150,7 @@ export class Orders {
         bestD2 = d2;
       }
     }
-    if (best >= 0) sim.bus.raise('interacted', e.idAt(p), e.idAt(best));
+    return best;
   }
 
   private carryOut(p: number): void {

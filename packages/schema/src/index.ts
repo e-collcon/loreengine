@@ -18,3 +18,4 @@ export {
 } from './base64.ts';
 export * from './save.ts';
 export * from './prefs.ts';
+export { sha256HexSync } from './sha256.ts';

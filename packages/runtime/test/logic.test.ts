@@ -335,7 +335,8 @@ describe('actions: one ActionExecutor', () => {
     const sim = bareSim();
     const asset = id('asset', 'theme') as Id<'asset'>;
     act(sim, { type: 'change-bgm', assetId: asset, fadeMs: 800 }, { type: 'change-bgm', assetId: null, fadeMs: 200 });
-    const bgm = presented(sim).filter((e) => e.kind === 'bgm');
+    // (Emberfall's own map music is requested first, when the map opens.)
+    const bgm = presented(sim).filter((e) => e.kind === 'bgm').slice(-2);
     expect(bgm.map((e) => [e.s, e.n])).toEqual([[asset, 800], ['', 200]]);
   });
 
