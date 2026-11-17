@@ -1,6 +1,6 @@
 # LoreEngine — Build Progress
 
-Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk after 13:30. **Extended by E after the hard stop** ("I intend to use all of them"): chunks 8 and 9 were built from about 20:20.
+Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk after 13:30. **Extended by E after the hard stop** ("I intend to use all of them"): chunks 8 and 9 were built that evening (chunk 8's first commit 21:12, green 22:17; chunk 9 green 22:48).
 
 | Chunk | Status | Tag | Elapsed | Notes |
 |---|---|---|---|---|
@@ -11,8 +11,8 @@ Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk aft
 | 5 Movement, sight, click orders (4A) | **Green** | `chunk-5-green` (cf8c476) | 0h21 | Movement, collision, separation, pathing with budgets, `castSegment`, high ground, acquisition, brains, region events, interact, click orders, zero-alloc gate, first tick bench |
 | 6 Combat (4B) | **Green** | `chunk-6-green` (62d807c) | 0h30 (see note) | Attacks and telegraphs, contact, knockback, hitstop, dodge with i-frames as an effect, active effects, health and death, terrain contact, scripted jumps, animator. Emberfall's boss fight plays headless. |
 | 7 Presentation | **Green** | `chunk-7-green` (08dacb7) | 0h40 (see note) | SVG bake, atlas textures on terrain and sprites, animation playback, feedback (flash, shake, particles, telegraph), occlusion silhouette, audio mixer, HUD. Three items are simplified: see Known issues. |
-| 8 Editor shell (5A) | **Green** | `chunk-8-green` (ad23289) | 1h50 | Editor document and 200-command undo, map preview over the headless `World`, terrain / raise / lower / flatten / ramp / region / place / select tools, overlays (levels, blocked edges, lint with click-to-focus, regions, sight), inspector, autosave to IndexedDB, playtest overlay with debug overlays, pause and step, repro files. Four screenshots in `docs/editor/`. |
-| 9 Database editors (5B) | **Green** | `chunk-9-green` (06d3e4a) | 1h40 | Forms generated from the schema for every database, settings and trigger part (★ every variant authorable), staged Save / Cancel with inline and project validation, terrain passability matrix, faction grid, attack hitbox preview and timeline, animation preview, previews on the player for effects, feedback and particles, trigger editor, asset panel (import files, folders, zips; bake written back), component-section overrides in the inspector. Six more screenshots in `docs/editor/`. |
+| 8 Editor shell (5A) | **Green** | `chunk-8-green` (ad23289) | about 2h (green 22:17) | Editor document and 200-command undo, map preview over the headless `World`, terrain / raise / lower / flatten / ramp / region / place / select tools, overlays (levels, blocked edges, lint with click-to-focus, regions, sight), inspector, autosave to IndexedDB, playtest overlay with debug overlays, pause and step, repro files. Four screenshots in `docs/editor/`. |
+| 9 Database editors (5B) | **Green** | `chunk-9-green` (06d3e4a) | 0h31 | Forms generated from the schema for every database, settings and trigger part (★ every variant authorable), staged Save / Cancel with inline and project validation, terrain passability matrix, faction grid, attack hitbox preview and timeline, animation preview, previews on the player for effects, feedback and particles, trigger editor, asset panel (import files, folders, zips; bake written back), component-section overrides in the inspector. Six more screenshots in `docs/editor/`. |
 
 ## Gate results (latest)
 
