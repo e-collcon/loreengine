@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildEmberfall, id } from '@loreengine/fixtures';
-import { createRuntime } from '@loreengine/runtime';
+import { createRuntime, parseRepro, projectForStart, replayRepro, serializeRepro, toRepro } from '@loreengine/runtime';
 import type { InputFrame, Runtime, RuntimeCommand } from '@loreengine/runtime';
 import { parseSave, serializeSave } from '@loreengine/schema';
 
@@ -136,3 +136,63 @@ describe('determinism (law L5)', () => {
     }
   });
 });
+
+describe('repro files (spec 8.8) [P5A.repro]', () => {
+  it('a recorded 10,000-tick session goes through a repro file and replays to the same hash', () => {
+    const project = buildEmberfall();
+    const rt = createRuntime(project, null, { seed: SEED, clockMode: 'continuous', record: true });
+    play(rt, 0, TICKS);
+    const hash = rt.view.stateHash();
+    const text = serializeRepro(toRepro(rt.recording()!, null, hash));
+    const repro = parseRepro(text);
+    expect(repro.frames).toHaveLength(TICKS);
+    expect(repro.commands).toHaveLength(5);
+    expect(replayRepro(buildEmberfall(), repro).view.stateHash()).toBe(hash);
+  });
+
+  it('pause and step: stepped mode advances one tick per step, and the switches replay exactly', () => {
+    const rt = createRuntime(buildEmberfall(), null, { seed: SEED, clockMode: 'continuous', record: true });
+    let t = 0;
+    const advance = (): void => {
+      const command = stream.commands.get(t);
+      if (command) rt.enqueue(command);
+      const before = rt.view.tick;
+      rt.tick(stream.frames[t]!);
+      if (rt.view.tick > before) t++;
+    };
+    while (t < 3000) advance();
+    rt.setClockMode('stepped'); // pause
+    for (let i = 0; i < 30; i++) advance();
+    expect(rt.view.tick).toBe(3000); // paused: frames go by, nothing advances
+    for (let step = 0; step < 50; step++) {
+      rt.requestSteps(1);
+      for (let i = 0; i < 4; i++) advance(); // only the first of these advances
+    }
+    expect(rt.view.tick).toBe(3050);
+    rt.setClockMode('continuous'); // resume
+    while (t < 4000) advance();
+    rt.setClockMode('stepped'); // paused at the end
+    const hash = rt.view.stateHash();
+    const repro = parseRepro(serializeRepro(toRepro(rt.recording()!, null, hash)));
+    expect(repro.frames).toHaveLength(4000);
+    expect(repro.clock.map((c) => c.mode)).toEqual(['stepped', 'continuous', 'stepped']);
+    const replayed = replayRepro(buildEmberfall(), repro);
+    expect(replayed.view.clockMode).toBe('stepped');
+    expect(replayed.view.stateHash()).toBe(hash);
+  });
+
+  it('play from here starts at the recorded spot; another revision or project is refused', () => {
+    const project = buildEmberfall();
+    const map = project.maps[0]!;
+    const start = { mapId: map.id, x: map.playerStart!.x + 3, y: map.playerStart!.y, facing: 1 };
+    const rt = createRuntime(projectForStart(project, start), null, { seed: 5, clockMode: 'continuous', record: true });
+    play(rt, 0, 600);
+    const repro = parseRepro(serializeRepro(toRepro(rt.recording()!, start, rt.view.stateHash())));
+    expect(replayRepro(buildEmberfall(), repro).view.stateHash()).toBe(repro.stateHash);
+    const edited = buildEmberfall();
+    edited.contentRevision++;
+    expect(() => replayRepro(edited, repro)).toThrow(/revision/);
+    expect(() => parseRepro('{"format":"something-else"}')).toThrow(/Not a LoreEngine repro/);
+  });
+});
+

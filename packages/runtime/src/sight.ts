@@ -14,6 +14,7 @@
 import { F_COLLIDER, F_DEAD, MAX_ENTITIES, NO_ENTITY, STATUS_UNTARGETABLE } from './entities.ts';
 import type { EntityId } from './entities.ts';
 import type { Sim } from './sim.ts';
+import type { World } from './world.ts';
 
 export const HIT_NONE = 0;
 export const HIT_TERRAIN = 1;
@@ -43,6 +44,70 @@ const EPS = 1e-6;
 const STEP = 0.2;
 const BISECT = 12;
 
+/** Where `castTerrain` reports a hit. */
+export interface TerrainHit {
+  /** How far along the segment, 0..1. */
+  t: number;
+  cell: number;
+}
+
+/**
+ * The terrain half of a cast (spec 7.6): does the segment pass under a
+ * column's top or through a sight- (or projectile-) blocking cell? Pure and
+ * allocation-free; `Sight.cast` uses it, and so do the editor's overlays.
+ */
+export function castTerrain(world: World, fx: number, fy: number, fz: number, tx: number, ty: number, tz: number, projectile: boolean, out: TerrainHit): boolean {
+  out.t = 1;
+  out.cell = -1;
+  const walls = projectile ? world.blocksProjectiles : world.blocksSight;
+  const dx = tx - fx;
+  const dy = ty - fy;
+  const dz = tz - fz;
+  const length = Math.hypot(dx, dy);
+  const steps = Math.max(1, Math.ceil(length / (world.hexSize * STEP)));
+
+  let current = world.cellAt(fx, fy);
+  let from = 0; // a parameter known to be inside `current`
+  for (let i = 1; i <= steps; i++) {
+    const to = i / steps;
+    // There may be more than one crossing inside a step: handle them one by one.
+    for (let guard = 0; guard < 4; guard++) {
+      if (world.cellAt(fx + dx * to, fy + dy * to) === current) break;
+      let lo = from;
+      let hi = to;
+      for (let k = 0; k < BISECT; k++) {
+        const mid = (lo + hi) / 2;
+        if (world.cellAt(fx + dx * mid, fy + dy * mid) === current) lo = mid;
+        else hi = mid;
+      }
+      const x = fx + dx * hi;
+      const y = fy + dy * hi;
+      const z = fz + dz * hi;
+      // Leaving `current` below its surface: the segment passed under the column's top.
+      if (current >= 0 && z < world.surfaceHeightIn(current, x, y) - EPS) {
+        out.t = hi;
+        out.cell = current;
+        return true;
+      }
+      const next = world.cellAt(x, y);
+      if (next >= 0 && (walls[next] === 1 || z < world.surfaceHeightIn(next, x, y) - EPS)) {
+        out.t = hi;
+        out.cell = next;
+        return true;
+      }
+      current = next;
+      from = hi;
+    }
+    from = to;
+  }
+  if (current >= 0 && tz < world.surfaceHeightIn(current, tx, ty) - EPS) {
+    out.t = 1;
+    out.cell = current;
+    return true;
+  }
+  return false;
+}
+
 export class Sight {
   /** Result of the last `cast`: HIT_*, how far along (0..1), and what. */
   hit = HIT_NONE;
@@ -52,6 +117,7 @@ export class Sight {
   entity = -1;
 
   private readonly buffer = new Int32Array(MAX_ENTITIES);
+  private readonly terrainHit: TerrainHit = { t: 1, cell: -1 };
 
   constructor(private readonly sim: Sim) {}
 
@@ -66,56 +132,14 @@ export class Sight {
     this.entity = -1;
     const world = this.sim.world;
     if (world === null) return HIT_NONE;
-    const walls = projectile ? world.blocksProjectiles : world.blocksSight;
+    if (castTerrain(world, fx, fy, fz, tx, ty, tz, projectile, this.terrainHit)) {
+      this.hit = HIT_TERRAIN;
+      this.t = this.terrainHit.t;
+      this.cell = this.terrainHit.cell;
+    }
     const dx = tx - fx;
     const dy = ty - fy;
-    const dz = tz - fz;
-    const length = Math.hypot(dx, dy);
-    const steps = Math.max(1, Math.ceil(length / (world.hexSize * STEP)));
-
-    let current = world.cellAt(fx, fy);
-    let from = 0; // a parameter known to be inside `current`
-    terrain: for (let i = 1; i <= steps; i++) {
-      const to = i / steps;
-      // There may be more than one crossing inside a step: handle them one by one.
-      for (let guard = 0; guard < 4; guard++) {
-        if (world.cellAt(fx + dx * to, fy + dy * to) === current) break;
-        let lo = from;
-        let hi = to;
-        for (let k = 0; k < BISECT; k++) {
-          const mid = (lo + hi) / 2;
-          if (world.cellAt(fx + dx * mid, fy + dy * mid) === current) lo = mid;
-          else hi = mid;
-        }
-        const x = fx + dx * hi;
-        const y = fy + dy * hi;
-        const z = fz + dz * hi;
-        // Leaving `current` below its surface: the segment passed under the column's top.
-        if (current >= 0 && z < world.surfaceHeightIn(current, x, y) - EPS) {
-          this.hit = HIT_TERRAIN;
-          this.t = hi;
-          this.cell = current;
-          break terrain;
-        }
-        const next = world.cellAt(x, y);
-        if (next >= 0 && (walls[next] === 1 || z < world.surfaceHeightIn(next, x, y) - EPS)) {
-          this.hit = HIT_TERRAIN;
-          this.t = hi;
-          this.cell = next;
-          break terrain;
-        }
-        current = next;
-        from = hi;
-      }
-      from = to;
-    }
-    if (this.hit === HIT_NONE && current >= 0 && tz < world.surfaceHeightIn(current, tx, ty) - EPS) {
-      this.hit = HIT_TERRAIN;
-      this.t = 1;
-      this.cell = current;
-    }
-
-    if (hitEntities && length > 0) this.castEntities(fx, fy, fz, dx, dy, dz, ignore);
+    if (hitEntities && (dx !== 0 || dy !== 0)) this.castEntities(fx, fy, fz, dx, dy, tz - fz, ignore);
     return this.hit;
   }
 

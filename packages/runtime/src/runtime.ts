@@ -36,6 +36,8 @@ export interface Recording {
   frames: InputFrame[];
   /** Commands, tagged with the index of the frame they were applied in. */
   commands: { frame: number; command: RuntimeCommand }[];
+  /** Clock mode switches (pause and step), tagged with the index of the next frame. */
+  clock: { frame: number; mode: ClockMode }[];
 }
 
 /** One hour at 60 Hz. Recording stops there with a diagnostic (law L8). */
@@ -48,6 +50,11 @@ export interface Runtime {
   enqueue(cmd: RuntimeCommand): void;
   /** Stepped (turn-based) mode only. */
   requestSteps(n: number): void;
+  /**
+   * Between ticks: switch the clock (the editor's pause and step, spec 8.8).
+   * Leaving stepped mode drops pending steps. Recorded, so replays match.
+   */
+  setClockMode(mode: ClockMode): void;
   /** Only between ticks. */
   snapshot(meta?: { savedAt?: string; kind?: SaveKind }): SaveState;
   /** The recording so far, when `record` was set. */
@@ -80,7 +87,7 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
   let inTick = false;
 
   const rec: Recording | null = opts.record
-    ? { projectId: project.id, contentRevision: project.contentRevision, seed: opts.seed, clockMode: sim.clockMode, frames: [], commands: [] }
+    ? { projectId: project.id, contentRevision: project.contentRevision, seed: opts.seed, clockMode: sim.clockMode, frames: [], commands: [], clock: [] }
     : null;
   if (rec) sim.onCommand = (command) => void rec.commands.push({ frame: rec.frames.length, command });
 
@@ -223,6 +230,14 @@ export function createRuntime(project: Project, save: SaveState | null, opts: Ru
         return;
       }
       if (Number.isInteger(n) && n > 0) sim.pendingSteps += n;
+    },
+    setClockMode(mode) {
+      alive();
+      if (inTick) throw new Error('setClockMode() is only valid between ticks.');
+      if (sim.clockMode === mode) return;
+      sim.clockMode = mode;
+      sim.pendingSteps = 0;
+      if (rec) rec.clock.push({ frame: rec.frames.length, mode });
     },
     snapshot(meta) {
       alive();

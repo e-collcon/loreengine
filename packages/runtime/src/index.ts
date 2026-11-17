@@ -6,6 +6,8 @@
  */
 export { createRuntime, MAX_RECORDED_FRAMES } from './runtime.ts';
 export type { Runtime, RuntimeOptions, Recording } from './runtime.ts';
+export { REPRO_FORMAT, REPRO_VERSION, parseRepro, projectForStart, replayRepro, serializeRepro, toRepro } from './repro.ts';
+export type { ReproFile, ReproStart } from './repro.ts';
 export { TICK_SLOTS, MAX_COMMANDS_PER_TICK } from './sim.ts';
 export type { RuntimeCommand, TickSlot, ClockMode, Outcome } from './sim.ts';
 export {

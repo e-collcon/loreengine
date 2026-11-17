@@ -148,6 +148,9 @@ export interface RuntimeView {
 
 export { World, edgeLevel, edgesConnect, modeBit, MODE_WALK, MODE_SWIM, MODE_FLY, SLOPED } from './world.ts';
 export { lintMap, lintProject, MAX_UNREACHABLE_AREAS } from './lint.ts';
+export { castTerrain } from './sight.ts';
+export { FLY_LEVELS } from './movement.ts';
+export type { TerrainHit } from './sight.ts';
 export type { LintWarning, LintCode } from './lint.ts';
 
 // Hex geometry the renderer needs to build terrain meshes. `render` may import
