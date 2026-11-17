@@ -63,6 +63,21 @@ const TOP_UV: readonly [number, number][] = [[0.5, 0.5], ...Array.from({ length:
   return [0.5 + Math.cos(a) / Math.sqrt(3), 0.5 + Math.sin(a) / 2];
 })];
 
+/**
+ * Destroy a display tree and what its nodes own: a Mesh's geometry (its GPU
+ * buffers) and a Graphics' own context. PixiJS's `destroy({ children: true })`
+ * keeps both, which a long-lived renderer would pile up with every rebuilt
+ * strip (D163). Textures are not touched: frames and pages have owners.
+ */
+export function release(node: Container): void {
+  const visit = (n: Container): void => {
+    for (const child of n.children) visit(child);
+    if (n instanceof Mesh) n.geometry.destroy(true); // true: its buffers too
+  };
+  visit(node);
+  node.destroy({ children: true, context: true });
+}
+
 /** Atlas pages as textures, owned by whoever made them; renderers borrow them (`useSharedArt`). */
 export class SharedArt {
   readonly pages = new Map<string, Texture>();
@@ -144,7 +159,7 @@ export class PixiRenderer {
 
   private constructor(
     private readonly app: Application,
-    private readonly view: RuntimeView,
+    private view: RuntimeView,
     readonly resolveAsset: AssetResolver,
     width: number,
     height: number,
@@ -190,6 +205,46 @@ export class PixiRenderer {
    * found in them are drawn from the atlas; anything else keeps its
    * engine placeholder shape.
    */
+  /** The canvas this renderer draws into (a borrowed renderer moves it between hosts). */
+  get canvas(): HTMLCanvasElement {
+    return this.app.canvas as HTMLCanvasElement;
+  }
+
+  /**
+   * Draw another view from now on: the editor keeps one renderer for every
+   * playtest, so PixiJS's per-renderer caches do not grow with each Play
+   * (DECISIONS D162). Everything drawn for the previous view is released.
+   */
+  attach(view: RuntimeView): void {
+    this.detach();
+    this.view = view;
+    this.setById.clear();
+    for (const set of view.project.animationSets) this.setById.set(set.id, set);
+  }
+
+  /**
+   * Release what was loaded for the current view: strips, sprites, frame
+   * textures, owned pages, the atlas index. Borrowed pages stay with their owner.
+   */
+  detach(): void {
+    if (this.destroyed) return;
+    for (const strip of this.strips.values()) release(strip);
+    this.strips.clear();
+    for (const sprite of this.sprites.values()) release(sprite.root);
+    this.sprites.clear();
+    for (const sprite of [...this.particles, ...this.ghosts]) {
+      sprite.visible = false;
+      sprite.texture = Texture.EMPTY;
+    }
+    this.dropPages();
+    this.atlas = null;
+    this.indicator.clear();
+    this.highlight.clear();
+    this.highlighted = -1;
+    this.mapId = '';
+    this.world.tint = 0xffffff;
+  }
+
   setAtlases(atlases: readonly AtlasDef[], pages: ReadonlyMap<string, Raster>): void {
     this.dropPages();
     for (const [blobId, raster] of pages) this.pages.set(blobId, Texture.from(rasterToCanvas(raster)));
@@ -221,7 +276,7 @@ export class PixiRenderer {
   private useAtlases(atlases: readonly AtlasDef[]): void {
     this.atlas = new AtlasIndex(atlases);
     this.invalidateTerrain();
-    for (const sprite of this.sprites.values()) sprite.root.destroy({ children: true });
+    for (const sprite of this.sprites.values()) release(sprite.root);
     this.sprites.clear();
   }
 
@@ -248,7 +303,7 @@ export class PixiRenderer {
 
   /** Drop cached terrain geometry: call after the map's layers are edited. */
   invalidateTerrain(): void {
-    for (const strip of this.strips.values()) strip.destroy({ children: true });
+    for (const strip of this.strips.values()) release(strip);
     this.strips.clear();
     this.top = this.view.world.loaded ? maxSurface(this.view.world, this.view.project.settings.levelHeight) : 0;
   }
@@ -342,7 +397,7 @@ export class PixiRenderer {
     // Release sprites of entities that no longer exist.
     for (const [index, sprite] of this.sprites) {
       if (!entities.alive(index) || entities.id(index) !== sprite.id) {
-        sprite.root.destroy({ children: true });
+        release(sprite.root);
         this.sprites.delete(index);
       }
     }
@@ -485,7 +540,7 @@ export class PixiRenderer {
         fi.set([q * 4, q * 4 + 1, q * 4 + 2, q * 4, q * 4 + 2, q * 4 + 3], q * 6);
       });
       if (!ok) {
-        root.destroy({ children: true });
+        release(root);
         return null;
       }
       const mesh = new Mesh({ geometry: new MeshGeometry({ positions: fp, uvs: fu, indices: fi }), texture: page });
@@ -531,7 +586,7 @@ export class PixiRenderer {
     const id = entities.id(index);
     const existing = this.sprites.get(index);
     if (existing && existing.id === id) return existing;
-    if (existing) existing.root.destroy({ children: true });
+    if (existing) release(existing.root);
 
     const ppu = this.view.project.settings.pixelsPerUnit;
     const data = entities.data(index);

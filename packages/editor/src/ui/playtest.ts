@@ -4,12 +4,14 @@
  * through the runtime's stepped mode, and repro capture.
  */
 import { startClient } from '@loreengine/player';
+import { PixiRenderer } from '@loreengine/render';
 import type { Client } from '@loreengine/player';
 import { serializeRepro } from '@loreengine/runtime';
 import type { ReproFile, ReproStart } from '@loreengine/runtime';
 import { World } from '@loreengine/runtime/view';
 import { blockedEdges } from '../core/overlays.ts';
 import { captureRepro, planPlaytest } from '../core/playtest.ts';
+import { MapPreview } from '../core/preview.ts';
 import type { PlaytestPlan } from '../core/playtest.ts';
 import { drawDebug } from './draw.ts';
 import type { DebugToggles } from './draw.ts';
@@ -38,7 +40,18 @@ export class PlaytestController {
     const debug = document.createElement('canvas');
     debug.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:2';
     let controller: PlaytestController | null = null;
+    if (!session.playtestRenderer) {
+      // Made once, from a preview of the project; each Play attaches its own runtime's view.
+      const canvas = document.createElement('canvas');
+      session.playtestRenderer = await PixiRenderer.create(new MapPreview(plan.project, plan.project.startMapId), {
+        canvas,
+        width: Math.max(1, host.clientWidth),
+        height: Math.max(1, host.clientHeight),
+        resolution: Math.min(2, window.devicePixelRatio || 1),
+      });
+    }
     const client = await startClient({
+      renderer: session.playtestRenderer,
       host,
       project: plan.project,
       save: plan.save,

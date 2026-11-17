@@ -42,17 +42,21 @@ const server = createServer(async (req, res) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 
-const browser = await chromium.launch({
-  // --stress-flush-code: V8 drops compiled code at every full GC, so the heap gates measure retained
-  // objects, not JIT code V8 would reclaim later anyway (D161).
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--js-flags=--stress-flush-code'],
-});
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 const problems = [];
-page.on('console', (m) => {
-  if (m.type() === 'error' || m.type() === 'warning') problems.push(`${m.type()}: ${m.text()}`);
-});
-page.on('pageerror', (e) => problems.push(String(e)));
+const GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+async function launch(args) {
+  const b = await chromium.launch({ args: [...GL, ...args] });
+  const p = await b.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  p.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') problems.push(`${m.type()}: ${m.text()}`);
+  });
+  p.on('pageerror', (e) => problems.push(String(e)));
+  return { b, p };
+}
+// The leak gates: --stress-flush-code makes V8 drop compiled code at every full GC, so the heap
+// gates measure retained objects, not JIT code V8 would reclaim later anyway (D161). It slows
+// code down, so the render bench runs in a second browser without it.
+let { b: browser, p: page } = await launch(['--js-flags=--stress-flush-code']);
 
 // The page's JS heap after a full GC, to the byte (performance.memory is bucketed and too coarse for a 5% gate).
 const cdp = await page.context().newCDPSession(page);
@@ -152,6 +156,10 @@ console.log(`  after every stop: textures ${baseline.textures}, audio nodes ${ba
 console.log(`  heap after GC: ${mb(heapBaseline)} MB at cycle ${WARM_CYCLES}, ${mb(heapEnd)} MB at cycle ${CYCLES} (${pct(heapGrowth)}; reported, not gated: each start bakes its own art, N9)`);
 
 /* ---- 3. render bench ------------------------------------------------------ */
+await browser.close();
+({ b: browser, p: page } = await launch([]));
+await page.goto(`${origin}/player/bench.html`);
+await page.waitForFunction(() => window.__bench !== undefined, null, { timeout: 30_000 });
 console.log('render bench: 128 x 128 map, 1280 x 800 viewport, software WebGL (SwiftShader) in headless Chromium');
 const line = (label, r) =>
   console.log(`  ${label}: mean ${r.meanMs.toFixed(2)} ms, p50 ${r.p50Ms.toFixed(1)} ms, p99 ${r.p99Ms.toFixed(1)} ms, max ${r.maxMs.toFixed(1)} ms over ${r.frames} frames (${r.rows} rows on screen, ${r.strips} strips built)`);

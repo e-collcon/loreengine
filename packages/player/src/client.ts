@@ -40,6 +40,12 @@ export interface ClientOptions {
   /** Called after each rendered frame. */
   onFrame?: (client: Client) => void;
   /**
+   * A renderer to borrow instead of making one: the editor keeps one for every
+   * playtest (D162). The client attaches its view, and on stop detaches it and
+   * takes its canvas out of the host, but does not destroy it.
+   */
+  renderer?: PixiRenderer;
+  /**
    * Already-baked art to draw from instead of baking at startup: the editor
    * bakes once and every playtest borrows it (DECISIONS N9). The client never
    * destroys it.
@@ -103,12 +109,24 @@ export async function startClient(options: ClientOptions): Promise<Client> {
   });
   const view = runtime.view;
 
-  const canvas = document.createElement('canvas');
-  canvas.style.display = 'block';
-  host.appendChild(canvas);
   const size = (): [number, number] => [Math.max(1, host.clientWidth), Math.max(1, host.clientHeight)];
-  const [w0, h0] = size();
-  const renderer = await PixiRenderer.create(view, { canvas, width: w0, height: h0, resolution: Math.min(2, window.devicePixelRatio || 1) });
+  const borrowed = options.renderer ?? null;
+  let renderer: PixiRenderer;
+  let canvas: HTMLCanvasElement;
+  if (borrowed) {
+    renderer = borrowed;
+    canvas = borrowed.canvas;
+    canvas.style.display = 'block';
+    host.appendChild(canvas);
+    renderer.attach(view);
+    renderer.resize(...size());
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.style.display = 'block';
+    host.appendChild(canvas);
+    const [w0, h0] = size();
+    renderer = await PixiRenderer.create(view, { canvas, width: w0, height: h0, resolution: Math.min(2, window.devicePixelRatio || 1) });
+  }
   if (options.zoom !== undefined) renderer.setZoom(options.zoom);
   const input = new InputMapper(project.inputActions);
   const prefs = options.prefs ?? defaultPrefs();
@@ -265,9 +283,15 @@ export async function startClient(options: ClientOptions): Promise<Client> {
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('mousemove', updateHover);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('contextmenu', onContext);
+      canvas.style.cursor = '';
       hud.destroy();
       mixer?.dispose();
-      renderer.destroy();
+      if (borrowed) borrowed.detach();
+      else renderer.destroy();
       runtime.dispose();
       canvas.remove();
     },

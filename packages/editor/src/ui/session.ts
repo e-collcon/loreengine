@@ -6,6 +6,7 @@
 import { buildEmberfall, emberfallBlobs } from '@loreengine/fixtures';
 import { bakeProjectArt } from '@loreengine/player';
 import { SharedArt } from '@loreengine/render';
+import type { PixiRenderer } from '@loreengine/render';
 import type { AssetRef, Project } from '@loreengine/schema';
 import { Storage } from '@loreengine/storage';
 import { Autosaver, EditorDocument } from '../core/document.ts';
@@ -19,6 +20,11 @@ export class EditorSession {
   art: SharedArt | null = null;
   /** A playtest is running: the canvas ignores keys and the overlay has the screen. */
   playing = false;
+  /**
+   * The renderer every playtest borrows (D162). Made on the first Play and
+   * kept for the session: PixiJS keeps a little for every renderer ever made.
+   */
+  playtestRenderer: PixiRenderer | null = null;
   /** What the status bar says about persistence. */
   storageStatus: string;
   private readonly listeners = new Set<SessionListener>();
