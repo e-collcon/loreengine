@@ -9,8 +9,9 @@
     "build": "npm run build -w @loreengine/player && npm run build -w @loreengine/editor",
     "test": "vitest run",
     "lint:random": "node tools/ban-math-random.mjs",
-    "bench": "node --expose-gc tools/bench.mjs",
-    "gates": "npm run typecheck && npm run build && npm run lint:random && npm run test"
+    "bench": "vitest run packages/runtime/test/budget.test.ts --disableConsoleIntercept",
+    "check:browser": "node tools/browser-checks.mjs",
+    "gates": "npm run typecheck && npm run build && npm run lint:random && npm run test && npm run check:browser"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

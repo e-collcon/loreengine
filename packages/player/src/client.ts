@@ -95,7 +95,9 @@ export async function startClient(options: ClientOptions): Promise<Client> {
     if (bgm !== undefined) mixer.changeBgm(bgm, 1000);
   }
   const feedback = new Feedback(project, view, { prefs, ...(mixer ? { audio: mixer } : {}) });
-  host.style.position ||= 'relative';
+  // The HUD positions itself in the host. Only a static host needs a containing block: overriding a
+  // stylesheet's `fixed` would collapse the host to its canvas, and the next client would measure 150 px.
+  if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
   const hud = new Hud(host, view);
   const interactKey = (project.inputActions.find((a) => a.role === 'interact')?.defaultBindings[0] ?? '').replace(/^Key/, '');
 

@@ -516,10 +516,11 @@ export class PixiRenderer {
     this.destroyed = true;
     this.strips.clear();
     this.sprites.clear();
+    // The scene and the renderer go first, so no shader still has a page bound when the pages are destroyed.
+    this.app.destroy(false, { children: true });
     for (const texture of this.frames.values()) texture.destroy(false);
     for (const texture of this.pages.values()) texture.destroy(true);
     this.frames.clear();
     this.pages.clear();
-    this.app.destroy(false, { children: true });
   }
 }

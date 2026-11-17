@@ -2,7 +2,7 @@
 
 These are for E's review gate after chunk 4 (spec §10): do row strips give an acceptable depth order on cliffs and ramps, and does a click land on the hex you meant?
 
-Art is placeholder: flat-colored hex tops, two-tone cliff faces, capsule figures with a white dot showing facing. The map is the elevation fixture (`fixtures/src/elevation.ts`), drawn by the real renderer in headless Chromium at device pixel ratio 2.
+Art is placeholder, but it goes through the real pipeline: the fixtures' generated SVGs (`fixtures/src/art.ts`: textured hex tops, a layered cliff face, posed figures) are baked into atlases in the browser at startup and drawn as atlas textures (chunk 7). Scenes 01–05 are the elevation fixture (`fixtures/src/elevation.ts`); 06–08 are Emberfall. All are drawn by the real renderer in headless Chromium at device pixel ratio 2.
 
 | File | What to look at |
 |---|---|
@@ -12,6 +12,7 @@ Art is placeholder: flat-colored hex tops, two-tone cliff faces, capsule figures
 | `04-pick-on-raised-hex.png` | A click at the yellow ring. The readout says `pick (9, 4) level 2 stone z 1.00` and the plateau cell is outlined. A flat pick at that screen point would have hit a ground cell two rows further north. |
 | `05-terraces-overview.png` | The whole fixture: plateau (level 2), terrace (level 1) with its ramp, pond, rock pillar, level-3 spire. |
 | `06-emberfall-plateau.png`, `07-emberfall-overview.png` | Emberfall with the same renderer. |
+| `08-boss-telegraph.png` | The player starts beside the boss, which winds up its slam. The red area on the ground is the slam's hitbox, drawn for the whole windup (the telegraph, D150), with the HUD's health bars. |
 
 ## See it live
 
@@ -40,6 +41,6 @@ node tools/spike-screenshots.mjs
 - **The row-strip rule holds on every scene tried.** Cliffs cover what is behind them, and units on raised ground draw over what is below.
 - **One refinement was needed.** Hex rows interlock, so a unit standing in the lower part of its hex overlaps the tops of the next row, which the plain rule draws *after* it and over its feet. The draw list therefore sorts an entity by the front edge of its footprint (its collider circle), not by its center point. It never sorts into a row it could not be standing on, so a unit just behind a cliff stays behind it. This is tested (`[P3B.depth.order]`) and logged as D81.
 - **Known limit: sprites much wider than their collider.** The footprint is the collider radius. Art that extends well past it at ground level (a wide shadow, a dragging cloak) can still be clipped by the next row's tops. Art convention for now: keep feet inside the collider's circle.
-- **Known limit: no occlusion silhouette yet.** A unit fully behind a tall cliff is simply hidden. The tinted silhouette of §6.6 comes with the rest of Phase 3B (chunk 7).
+- **Occlusion silhouette (chunk 7):** a covered player-controlled or persistent unit gets a tinted, translucent copy drawn on top. It is not masked to the covered part yet, so it also lightly tints the visible part (D151).
 - **Ramp sides are drawn as half-level faces.** That is the wide-ramp question (DECISIONS_LOG N6) made visible: two same-direction ramps side by side would show a seam like these sides.
-- **Not measured yet:** the 8 ms render budget on a 128 × 128 map (§9.1). The bench is a browser bench and has not been written.
+- **Render budget (§9.1):** measured by `tools/browser-checks.mjs` on a 128 × 128 map; the numbers and what they do and do not cover are in `docs/PROGRESS.md`, Bench numbers.
