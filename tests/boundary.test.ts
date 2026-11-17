@@ -30,6 +30,8 @@ const ALLOWED: Record<string, readonly string[]> = {
     '@loreengine/schema', '@loreengine/hexmath', '@loreengine/algorithms', '@loreengine/runtime', '@loreengine/runtime/view',
     '@loreengine/storage', '@loreengine/render', '@loreengine/audio', '@loreengine/fixtures', '@loreengine/player',
     'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime',
+    'zod', // generated forms read the schema source (spec 8.6, D179)
+    'fflate', // the asset panel imports zip files (spec 8.6)
   ],
 };
 

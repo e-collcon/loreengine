@@ -16,8 +16,13 @@ export interface PlaytestPlan {
   readonly save: SaveState;
 }
 
-export function planPlaytest(source: Project, seed: number, start: ReproStart | null = null): PlaytestPlan {
+/**
+ * `prepare` edits the copy before the session starts: a database preview puts
+ * the draft item in it, unsaved, without touching the document.
+ */
+export function planPlaytest(source: Project, seed: number, start: ReproStart | null = null, prepare?: (copy: Project) => void): PlaytestPlan {
   const project = projectForStart(source, start);
+  prepare?.(project);
   const fresh = createRuntime(project, null, { seed, clockMode: 'continuous' });
   const save = fresh.snapshot({ kind: 'playtest' });
   fresh.dispose();

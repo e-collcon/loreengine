@@ -54,11 +54,16 @@ export interface ClientOptions {
 }
 
 /** The project's vector sources baked into atlases and their pages (spec 6.7), in the browser. */
-export async function bakeProjectArt(project: Project, resolve: (ref: AssetRef) => Promise<Uint8Array | null>): Promise<{ atlases: AtlasDef[]; pages: Map<string, Raster> }> {
+export async function bakeProjectArt(
+  project: Project,
+  resolve: (ref: AssetRef) => Promise<Uint8Array | null>,
+  /** Where the page PNGs go; by default only their ids are computed (a bake kept in memory). */
+  putBlob?: (bytes: Uint8Array, mime: string, extra: { width: number; height: number }) => Promise<AssetRef>,
+): Promise<{ atlases: AtlasDef[]; pages: Map<string, Raster> }> {
   const decoder = new TextDecoder();
   const atlases: AtlasDef[] = [];
   const pages = new Map<string, Raster>();
-  const tools = browserBakeTools(async (bytes, mime, extra) => ({ blobId: sha256HexSync(bytes), mime, byteSize: bytes.length, ...extra }));
+  const tools = browserBakeTools(putBlob ?? (async (bytes, mime, extra) => ({ blobId: sha256HexSync(bytes), mime, byteSize: bytes.length, ...extra })));
   for (const atlas of project.assets.atlases) {
     const sources = [];
     for (const sourceId of atlas.sourceIds) {

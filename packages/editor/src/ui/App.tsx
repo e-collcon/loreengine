@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { colorOf } from '@loreengine/render';
 import { ComponentDataSchema } from '@loreengine/schema';
 import type { ComponentData, EntityPlacement, Id } from '@loreengine/schema';
@@ -14,6 +14,15 @@ import { CanvasController } from './canvas.ts';
 import { DEBUG_LABELS } from './draw.ts';
 import type { DebugToggles } from './draw.ts';
 import { PlaytestController } from './playtest.ts';
+import type { PlaytestPreview } from './playtest.ts';
+import { DatabaseEditor, SettingsEditor, TriggerEditor } from './Databases.tsx';
+import { AssetPanel } from './Assets.tsx';
+import { DATABASES, atlasFrames, nameOfId, referenceOptions } from '../forms/databases.ts';
+import { FormBuilder } from '../forms/model.ts';
+import { SchemaForm } from '../forms/SchemaForm.tsx';
+import type { FormContext } from '../forms/SchemaForm.tsx';
+import { itemIssues } from '../core/staging.ts';
+import type { DatabaseKey } from '../forms/databases.ts';
 import { REGION_COLORS } from './draw.ts';
 import type { EditorSession } from './session.ts';
 
@@ -32,7 +41,7 @@ export function App({ session }: { session: EditorSession }) {
   useSession(session);
   const host = useRef<HTMLDivElement>(null);
   const [canvas, setCanvas] = useState<CanvasController | null>(null);
-  const [playtest, setPlaytest] = useState<{ start: { x: number; y: number } | null } | null>(null);
+  const [playtest, setPlaytest] = useState<{ start: { x: number; y: number } | null; preview?: PlaytestPreview } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -141,27 +150,32 @@ export function App({ session }: { session: EditorSession }) {
           </ul>
         </Section>
         <Section title="Databases">
-          <ul className="list muted">
-            {(
-              [
-                ['Terrains', project.terrains.length],
-                ['Archetypes', project.archetypes.length],
-                ['Attacks', project.attacks.length],
-                ['Brains', project.brains.length],
-                ['Effects', project.statusEffects.length],
-                ['Feedback', project.feedback.length],
-                ['Particles', project.particlePresets.length],
-                ['Animation sets', project.animationSets.length],
-                ['Factions', project.factions.length],
-                ['Variables', project.variables.length],
-                ['Input actions', project.inputActions.length],
-              ] as const
-            ).map(([name, count]) => (
-              <li key={name} title="Database editors are chunk 9">
-                {name}
-                <span className="meta">{count}</span>
+          <ul className="list" data-testid="databases">
+            {DATABASES.map(({ key, label }) => (
+              <li key={key} aria-selected={state.panel === `db:${key}`} onClick={() => session.setState({ panel: `db:${key}` })}>
+                {label}
+                <span className="meta">{(project[key] as unknown[]).length}</span>
               </li>
             ))}
+            <li aria-selected={state.panel === 'settings'} onClick={() => session.setState({ panel: 'settings' })}>
+              Settings
+            </li>
+          </ul>
+        </Section>
+        <Section title="Logic and assets">
+          <ul className="list">
+            <li aria-selected={state.panel === `triggers:${map.id}`} onClick={() => session.setState({ panel: `triggers:${map.id}` })}>
+              Triggers on {map.name}
+              <span className="meta">{map.triggers.length}</span>
+            </li>
+            <li aria-selected={state.panel === 'triggers:global'} onClick={() => session.setState({ panel: 'triggers:global' })}>
+              Global triggers
+              <span className="meta">{project.triggers.length}</span>
+            </li>
+            <li aria-selected={state.panel === 'assets'} onClick={() => session.setState({ panel: 'assets' })}>
+              Assets
+              <span className="meta">{project.assets.vectorSources.length + project.assets.images.length + project.assets.audio.length}</span>
+            </li>
           </ul>
         </Section>
       </aside>
@@ -171,6 +185,21 @@ export function App({ session }: { session: EditorSession }) {
       <aside className="inspector">
         <Inspector session={session} canvas={canvas} />
       </aside>
+
+      {state.panel && (
+        <section className="panel-view" aria-label="Editor panel">
+          <div className="panel-view-bar">
+            <button className="btn small" onClick={() => session.setState({ panel: null })}>
+              ← Map
+            </button>
+            <span className="muted">Database edits are staged: Save keeps them, Cancel drops them. They are not on the undo stack.</span>
+          </div>
+          {state.panel.startsWith('db:') && <DatabaseEditor key={state.panel} session={session} dbKey={state.panel.slice(3) as DatabaseKey} onPreview={(preview) => setPlaytest({ start: null, preview })} />}
+          {state.panel === 'settings' && <SettingsEditor session={session} />}
+          {state.panel.startsWith('triggers:') && <TriggerEditor key={state.panel} session={session} mapId={state.panel === 'triggers:global' ? null : state.panel.slice(9)} />}
+          {state.panel === 'assets' && <AssetPanel session={session} />}
+        </section>
+      )}
 
       <footer className="statusbar">
         <span>{hover >= 0 ? `cell (${hover % map.width}, ${Math.floor(hover / map.width)})  level ${map.layers.level[hover]}${map.layers.ramp[hover] ? `  ramp ↗${map.layers.ramp[hover]}` : ''}  ${project.terrains.find((t) => t.id === map.terrainPalette[map.layers.terrain[hover]!])?.name ?? ''}` : 'Pan: right-drag, Space+drag or arrows · Zoom: wheel'}</span>
@@ -184,6 +213,7 @@ export function App({ session }: { session: EditorSession }) {
         <Playtest
           session={session}
           start={playtest.start ? { mapId: map.id, x: playtest.start.x, y: playtest.start.y, facing: map.playerStart?.facing ?? 0 } : null}
+          preview={playtest.preview ?? null}
           onClose={() => {
             setPlaytest(null);
             canvas?.invalidate();
@@ -292,12 +322,6 @@ function Inspector({ session, canvas }: { session: EditorSession; canvas: Canvas
   const key = state.selection;
   const placement = key && key !== PLAYER_START_KEY ? map.placements.find((p) => p.key === key) : undefined;
   const isStart = key === PLAYER_START_KEY && map.playerStart !== undefined;
-  const [overrides, setOverrides] = useState('');
-  const [error, setError] = useState('');
-  useEffect(() => {
-    setOverrides(placement?.overrides ? JSON.stringify(placement.overrides, null, 2) : '');
-    setError('');
-  }, [key, placement?.overrides]);
 
   if (!placement && !isStart) {
     return (
@@ -359,57 +383,64 @@ function Inspector({ session, canvas }: { session: EditorSession; canvas: Canvas
         {num('Facing °', (position.facing * 180) / Math.PI, (deg) => update({ facing: (deg * Math.PI) / 180 }), 15)}
         {canvas && <p className="muted">Stands at height {canvas.world.surfaceHeight(position.x, position.y).toFixed(2)} (snapped to the surface).</p>}
       </Section>
-      {placement && (
-        <Section title="Overrides">
-          <p className="muted">Components that replace the archetype’s for this placement, as JSON. Generated forms arrive with the database editors (chunk 9).</p>
-          <textarea className="json" value={overrides} placeholder="{}" onChange={(e) => setOverrides(e.target.value)} spellCheck={false} />
-          {error && <p className="error">{error}</p>}
-          <button
-            className="btn small"
-            onClick={() => {
-              const text = overrides.trim();
-              if (text === '') {
-                const { overrides: _drop, ...rest } = structuredClone(placement);
-                session.doc.run(new UpdatePlacement('Clear overrides', map.id, structuredClone(placement), rest as EntityPlacement));
-                setError('');
-                return;
-              }
-              let raw: unknown;
-              try {
-                raw = JSON.parse(text);
-              } catch (err) {
-                setError(`Not JSON: ${(err as Error).message}`);
-                return;
-              }
-              const parsed = ComponentDataSchema.safeParse(raw);
-              if (!parsed.success) {
-                setError(parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('\n'));
-                return;
-              }
-              setError('');
-              update({ overrides: parsed.data as ComponentData });
-            }}
-          >
-            Apply overrides
-          </button>
-        </Section>
-      )}
+      {placement && <OverridesForm key={placement.key} session={session} mapId={map.id} placement={placement} />}
     </>
   );
 }
 
-function Playtest({ session, start, onClose }: { session: EditorSession; start: { mapId: string; x: number; y: number; facing: number } | null; onClose: () => void }) {
+const componentSpec = new FormBuilder().spec(ComponentDataSchema);
+
+/** A placement's overrides: the archetype's components it replaces, as add/remove sections (spec 8.5, 8.6). */
+function OverridesForm({ session, mapId, placement }: { session: EditorSession; mapId: string; placement: EntityPlacement }) {
+  const [draft, setDraft] = useState<ComponentData>(() => structuredClone(placement.overrides ?? {}));
+  useEffect(() => setDraft(structuredClone(placement.overrides ?? {})), [placement.overrides]);
+  const issues = useMemo(() => itemIssues(ComponentDataSchema, draft), [draft]);
+  const project = session.project;
+  const map = project.maps.find((m) => m.id === mapId);
+  const ctx = useMemo<FormContext>(() => {
+    const options = referenceOptions(project, map);
+    const frames = atlasFrames(project);
+    return { options, frames, issues, nameOf: nameOfId(project, map), newId: session.doc.newId, firstId: (ref) => options(ref)[0]?.id ?? '', firstFrame: (a) => frames(a)[0] ?? '' };
+  }, [project, map, issues, session.doc.newId]);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(placement.overrides ?? {});
+  const apply = (): void => {
+    const before = structuredClone(placement);
+    const { overrides: _old, ...rest } = structuredClone(placement);
+    const after: EntityPlacement = Object.keys(draft).length > 0 ? { ...rest, overrides: structuredClone(draft) } : (rest as EntityPlacement);
+    session.doc.run(new UpdatePlacement('Edit overrides', mapId, before, after));
+  };
+  return (
+    <Section title="Overrides">
+      <p className="muted">Components that replace the archetype’s for this placement. Apply is one undo step.</p>
+      <div className="overrides-form">
+        <SchemaForm spec={componentSpec} value={draft} onChange={(v) => setDraft(v as ComponentData)} ctx={ctx} />
+      </div>
+      {issues.size > 0 && <p className="error">{issues.size} problem(s)</p>}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className="btn small" disabled={!dirty} onClick={() => setDraft(structuredClone(placement.overrides ?? {}))}>
+          Revert
+        </button>
+        <button className="btn small primary" disabled={!dirty || issues.size > 0} onClick={apply}>
+          Apply overrides
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+function Playtest({ session, start, preview, onClose }: { session: EditorSession; start: { mapId: string; x: number; y: number; facing: number } | null; preview: PlaytestPreview | null; onClose: () => void }) {
   const stage = useRef<HTMLDivElement>(null);
   const [controller, setController] = useState<PlaytestController | null>(null);
   const [stats, setStats] = useState({ tick: 0, tickMs: 0, entities: 0, queued: 0, paused: false, outcome: null as string | null });
   const [toggles, setToggles] = useState<DebugToggles | null>(null);
   const [run, setRun] = useState(0);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
     let made: PlaytestController | null = null;
     session.playing = true;
-    void PlaytestController.start(session, stage.current!, start).then((c) => {
+    void PlaytestController.start(session, stage.current!, start, preview).then((c) => {
       if (!alive) {
         c.stop();
         return;
@@ -426,14 +457,14 @@ function Playtest({ session, start, onClose }: { session: EditorSession; start: 
       setToggles({ ...c.toggles });
       setController(c);
       (window as unknown as { __playtest?: unknown }).__playtest = c;
-    });
+    }, (err: unknown) => setError(`The playtest could not start: ${(err as Error).message}`));
     return () => {
       alive = false;
       made?.stop();
       session.playing = false;
       (window as unknown as { __playtest?: unknown }).__playtest = undefined;
     };
-  }, [session, start, run]);
+  }, [session, start, preview, run]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent): void => {
@@ -476,6 +507,8 @@ function Playtest({ session, start, onClose }: { session: EditorSession; start: 
               {DEBUG_LABELS[k]}
             </button>
           ))}
+        {preview && <span className="preview-tag">previewing {preview.label} on the player every 2 s</span>}
+        {error && <span className="error">{error}</span>}
         <span className="readout">
           {stats.outcome ? `${stats.outcome.toUpperCase()} · ` : ''}tick {stats.tick} · {stats.tickMs.toFixed(2)} ms/tick · {stats.entities} entities · {stats.queued} queued
         </span>

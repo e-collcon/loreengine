@@ -1,6 +1,6 @@
 # LoreEngine — Build Progress
 
-Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk after 13:30. **Extended by E after the hard stop** ("I intend to use all of them"): chunk 8 was built from about 20:20.
+Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk after 13:30. **Extended by E after the hard stop** ("I intend to use all of them"): chunks 8 and 9 were built from about 20:20.
 
 | Chunk | Status | Tag | Elapsed | Notes |
 |---|---|---|---|---|
@@ -12,7 +12,7 @@ Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk aft
 | 6 Combat (4B) | **Green** | `chunk-6-green` (62d807c) | 0h30 (see note) | Attacks and telegraphs, contact, knockback, hitstop, dodge with i-frames as an effect, active effects, health and death, terrain contact, scripted jumps, animator. Emberfall's boss fight plays headless. |
 | 7 Presentation | **Green** | `chunk-7-green` (08dacb7) | 0h40 (see note) | SVG bake, atlas textures on terrain and sprites, animation playback, feedback (flash, shake, particles, telegraph), occlusion silhouette, audio mixer, HUD. Three items are simplified: see Known issues. |
 | 8 Editor shell (5A) | **Green** | `chunk-8-green` (ad23289) | 1h50 | Editor document and 200-command undo, map preview over the headless `World`, terrain / raise / lower / flatten / ramp / region / place / select tools, overlays (levels, blocked edges, lint with click-to-focus, regions, sight), inspector, autosave to IndexedDB, playtest overlay with debug overlays, pause and step, repro files. Four screenshots in `docs/editor/`. |
-| 9 Database editors | Not started | — | — | |
+| 9 Database editors (5B) | **Green** | `chunk-9-green` (SHA9) | 1h40 | Forms generated from the schema for every database, settings and trigger part (★ every variant authorable), staged Save / Cancel with inline and project validation, terrain passability matrix, faction grid, attack hitbox preview and timeline, animation preview, previews on the player for effects, feedback and particles, trigger editor, asset panel (import files, folders, zips; bake written back), component-section overrides in the inspector. Six more screenshots in `docs/editor/`. |
 
 ## Gate results (latest)
 
@@ -23,12 +23,12 @@ Run with `npm run gates` (typecheck, builds, nondeterminism lint, tests, browser
 | 1. `tsc --noEmit`, strict, every package | Pass: 10 packages, sources and tests |
 | 2. Production builds of `editor` and `player` | Pass: both are real apps now |
 | 3. Package boundary test | Pass (`editor` imports only `runtime`'s public entries, `@loreengine/runtime` and `/view`) |
-| 4. Chunk 8 signature and behavior tests | Pass: ★ undo integrity (200 commands undone to a byte-identical project; 500 commands undone to exactly 200 back, D168), ★ playtest isolation (5,000 ticks with kills and variable changes: document byte-identical, revision unchanged, nothing autosaved), lint finds the broken ramp with a place to focus, preview, overlays, strokes, autosave timing, repro round trips with pause and step |
-| 5. Earlier chunks' tests | Pass, unchanged in chunk 8 (D178); earlier logged edits D76, D116, D141, D155 |
+| 4. Chunk 9 signature and behavior tests | Pass: ★ every variant authorable (every union variant reachable from the project schema has a form, and its starting value parses), every id field names its database, staged Save and Cancel (valid edit saves; invalid field, still-referenced delete, region event on a global trigger and a too-small max level are refused, the project untouched), assets (import, re-import by name, zip, removal refused while used, atlas assignment, bake write-back), and a database smoke test in the browser checks. Chunk 8's: ★ undo integrity (200 commands undone to a byte-identical project; 500 commands undone to exactly 200 back, D168), ★ playtest isolation (5,000 ticks with kills and variable changes: document byte-identical, revision unchanged, nothing autosaved), lint finds the broken ramp with a place to focus, preview, overlays, strokes, autosave timing, repro round trips with pause and step |
+| 5. Earlier chunks' tests | Pass, unchanged in chunks 8 and 9 (D178); the boundary test's allowed-imports table for `editor` gained `zod` and `fflate` (D179); earlier logged edits D76, D116, D141, D155 |
 | 6. Replay determinism | Pass: 10,000 ticks, three runs, checkpoints every 1,000 ticks; save-resume at 5,000; mid-chase save-resume; and now through repro files |
-| 7. Leak gates, budget benches | Pass. Map leak gate and zero-allocation gate pass. **Playtest leak gate passes:** 50 Play/Stop cycles in the editor, textures, audio nodes and canvases back to baseline after every Stop, heap +2.2% between cycle 10 and 50 (limit 5%; D161, D162, D163). Tick and render benches measured (below). |
+| 7. Leak gates, budget benches | Pass. Map leak gate and zero-allocation gate pass. **Playtest leak gate passes:** 50 Play/Stop cycles in the editor, textures, audio nodes and canvases back to baseline after every Stop, heap +2.2% to +4.8% between cycle 10 and 50 over the last runs (limit 5%; D161, D162, D163; the margin is discussed under Known issues). Tick and render benches measured (below). |
 
-Totals: 478 tests in 28 files, plus the browser checks. `npm run gates` exits 0.
+Totals: 489 tests in 31 files, plus the browser checks. `npm run gates` exits 0.
 
 ## Bench numbers (measured)
 
@@ -62,20 +62,18 @@ See `docs/DECISIONS_LOG.md`, section **Needs E** (N1–N9). **N6 is the one to r
 - **Fixed in chunk 8, found by the leak gate (D163):** destroyed terrain strips and sprites kept their GPU buffers and graphics contexts. Short-lived renderers hid it; the editor's canvas would have grown with every edit.
 - **Fixed after chunk 7, found by the leak gate (D157):** a second client started on the same host saw a 150 px tall viewport, which the editor's playtest would have hit on its second start.
 - **Session timeline:** the worker was down again from about 12:31 to 18:09 GMT+7, past the 14:59 hard stop. After E's "Try again", the finish work in progress was completed (playtest leak gate, render bench, the D157 fix, docs). E then asked to keep going, and chunk 8 was built.
-- **Chunk 8 scope notes:** no map creation or resizing, no project import/export buttons (storage has the functions), overrides are edited as JSON until chunk 9's generated forms (D171, D175). The editor's bundle is one 900 KB chunk (Vite warns; no code splitting yet).
+- **The playtest heap gate's margin is thin** (+4.6% and +4.8% in the two chunk 9 runs, against 5%; chunk 8's runs were +2.2% to +2.8%). Over 100 Play/Stop cycles the heap after GC climbs about 6 KB per cycle. Heap-snapshot diffs over 20 cycles find none of our objects, closures or listeners retained: what grows is V8's own bookkeeping (inline-cache handlers, feedback vectors, allocation sites, about 1.5 KB per cycle) and the browser's performance-timeline entries (bounded buffers). The larger editor bundle of chunk 9 gives V8 more of that to keep. If the gate starts failing, re-run the snapshot diff (the method is in D160 and D161) before suspecting a leak, and consider measuring retained objects by snapshot instead of total heap: that would be a change to the gate, for E to approve.
+- **Chunk 8 scope notes:** no map creation or resizing, no project import/export buttons (storage has the functions), placement overrides were JSON in chunk 8 and are generated component sections since chunk 9 (D188). The editor's bundle is one 900 KB chunk (Vite warns; no code splitting yet).
 - Sprites much wider than their collider can be clipped at the feet by the next row's hex tops (see the spike README).
 - The player page bakes its art at startup, which takes a second or two in software-rendered headless Chromium; until then it draws the engine's placeholder shapes.
 
 ## Next step
 
-**Resume at chunk 9, the database editors (spec §8.6).** Chunk 8's shell is in place: the left panel already lists every database with its count (`packages/editor/src/ui/App.tsx`, section "Databases"), and the inspector's JSON overrides box is the stopgap to replace.
+**All nine chunks of the kickoff are built and green.** Phase 6 and later are out of scope for this build (kickoff), so the next steps are E's:
 
-What chunk 9 needs, in a workable order:
+1. **The review gates.** The render spike (`docs/spike/README.md`) and the editor (`docs/editor/README.md`) have screenshots and notes for review.
+2. **Needs E** in `docs/DECISIONS_LOG.md`, N1 to N9: N6 (wide ramps) first, then N9 (the editor owns the baked art and one playtest renderer, a §9.3 scope change).
+3. **The budgets on E's machine.** The tick bench (`npm run bench`) and the render bench (`npm run build && npm run check:browser`) were measured in this cloud container with software WebGL. The 8 ms render budget needs a run with a GPU.
+4. **Tags.** `chunk-1-green` to `chunk-9-green` exist only in this session's clone (tag pushes were refused all session, N5); the green commits are listed by SHA in the table above, and E can tag them.
 
-1. **Generated forms from the schema's unions** (`packages/schema/src/project.ts`; `listLeafFields` in `walk.ts` already walks every leaf). One form per condition, action, behavior and payload variant, and the test: enumerate every union variant and fail if one has no form (§8.10 "Every variant authorable").
-2. **The list-and-form pattern** for every database: list on the left, form on the right, edits staged until Save, discarded by Cancel, validated inline with the schema and `checkProject` (§8.6). Database edits use Save and Cancel, not the undo stack (§8.7): on Save, replace the database array and call `doc.changed()` so the canvas, preview and autosave follow.
-3. **Extras per §8.6:** terrains' passability matrix and frame pickers; archetype components as add/remove sections (then retire the JSON overrides box); attack hitbox preview (reuse `hitboxOutline` from `@loreengine/render`) and the windup/active/recovery bar; brain states and transitions; effect, feedback and particle previews on a sample entity; animation set clip mapping; the factions N × N grid; plain forms for variables, input actions and settings.
-4. **Asset panel:** import an SVG folder or zip, raster images and audio (store blobs with `Storage.putBlob`), bake with `bakeProjectArt` and write the `AtlasDef`s back into the project, then `session.bakeArt()` so the canvas and playtests pick it up.
-5. **Trigger editor:** per map, a list of triggers, each a `when` / `given` / `then` built from the same generated forms.
-
-The editor runs with `npm run dev -w @loreengine/editor`. `tools/browser-checks.mjs` drives its UI by button text; keep it green when the toolbar changes.
+If work continues before Phase 6, the smallest useful items are in Known issues: the unmasked occlusion silhouette (D151), outline flashing (D152), map creation and resizing in the editor (D175), and code splitting for the editor bundle.

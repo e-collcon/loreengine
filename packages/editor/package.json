@@ -18,7 +18,9 @@
     "@loreengine/fixtures": "*",
     "@loreengine/player": "*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.7",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -33,6 +33,11 @@ export interface EditorState {
   /** Selected placement key (or the player start's), for Select and the inspector. */
   selection: string | null;
   overlays: Record<Overlay, boolean>;
+  /**
+   * What covers the canvas and inspector, if anything: `db:<key>` a database,
+   * `settings`, `triggers:global` or `triggers:<mapId>`, `assets`.
+   */
+  panel: string | null;
 }
 
 export function initialState(mapId: string): EditorState {
@@ -46,5 +51,6 @@ export function initialState(mapId: string): EditorState {
     archetypeId: null,
     selection: null,
     overlays: { levels: false, blocked: true, lint: true, regions: true, sight: true },
+    panel: null,
   };
 }

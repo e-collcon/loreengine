@@ -7,7 +7,9 @@ import { buildEmberfall, emberfallBlobs } from '@loreengine/fixtures';
 import { bakeProjectArt } from '@loreengine/player';
 import { SharedArt } from '@loreengine/render';
 import type { PixiRenderer } from '@loreengine/render';
+import { sha256HexSync } from '@loreengine/schema';
 import type { AssetRef, Project } from '@loreengine/schema';
+import { writeBake } from '../core/assets.ts';
 import { Storage } from '@loreengine/storage';
 import { Autosaver, EditorDocument } from '../core/document.ts';
 import { initialState } from '../core/state.ts';
@@ -30,6 +32,8 @@ export class EditorSession {
   private readonly listeners = new Set<SessionListener>();
   private readonly saver: Autosaver | null;
   private readonly fallbackBlobs = emberfallBlobs();
+  /** Blobs imported while IndexedDB is unavailable: they last for this page only. */
+  private readonly localBlobs = new Map<string, { bytes: Uint8Array; mime: string }>();
 
   private constructor(
     readonly doc: EditorDocument,
@@ -80,16 +84,31 @@ export class EditorSession {
 
   readonly resolveAsset = async (ref: AssetRef): Promise<Uint8Array | null> => {
     const stored = this.storage ? await this.storage.getBlob(ref.blobId).catch(() => null) : null;
-    return stored ?? this.fallbackBlobs.get(ref.blobId)?.bytes ?? null;
+    return stored ?? this.localBlobs.get(ref.blobId)?.bytes ?? this.fallbackBlobs.get(ref.blobId)?.bytes ?? null;
   };
 
-  /** Bake the project's art once; the canvas and playtests borrow it. */
-  async bakeArt(): Promise<SharedArt | null> {
-    const baked = await bakeProjectArt(this.project, this.resolveAsset);
+  /** Keep a file's bytes and return its asset reference (content-addressed: the id is its SHA-256). */
+  readonly storeBlob = async (bytes: Uint8Array, mime: string, extra: Pick<AssetRef, 'width' | 'height' | 'durationMs'> = {}): Promise<AssetRef> => {
+    if (this.storage) return this.storage.putBlob(bytes, mime, extra);
+    const blobId = sha256HexSync(bytes);
+    this.localBlobs.set(blobId, { bytes, mime });
+    return { blobId, mime, byteSize: bytes.length, ...extra };
+  };
+
+  /**
+   * Bake the project's art; the canvas and playtests borrow it. With `write`,
+   * the page images are stored and the baked atlases replace the project's
+   * (the asset panel's Bake); otherwise the bake lives in memory only.
+   */
+  async bakeArt(write = false): Promise<SharedArt | null> {
+    const baked = await bakeProjectArt(this.project, this.resolveAsset, write ? (bytes, mime, extra) => this.storeBlob(bytes, mime, extra) : undefined);
+    if (write) writeBake(this.doc, baked.atlases);
     if (baked.atlases.length === 0) return null;
-    this.art?.destroy();
+    // Swap first, so the canvas re-borrows the new pages; free the old ones once it has drawn with them.
+    const old = this.art;
     this.art = new SharedArt(baked.atlases, baked.pages);
     this.emit();
+    if (old) requestAnimationFrame(() => requestAnimationFrame(() => old.destroy()));
     return this.art;
   }
 

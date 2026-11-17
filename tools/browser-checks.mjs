@@ -7,6 +7,8 @@
 //      textures, audio nodes, canvases and camera size return to baseline (a
 //      gate). Its heap growth is reported, not gated: each start bakes its own
 //      art, and PixiJS keeps a little per new texture (N9).
+//   1b. The database editors through the UI: a saved edit reaches the project,
+//      an invalid one is refused, Cancel restores the draft (spec 8.6).
 //   3. Render bench: frame time on a 128 x 128 map, full viewport. It measures
 //      and reports; the 8 ms figure is a target to verify.
 // Usage: npm run build && npm run check:browser (part of `npm run gates`)
@@ -114,6 +116,28 @@ const pct = (n) => `${(n * 100).toFixed(1)}%`;
   console.log(`  while playing: up to ${peak.textures} renderer textures (the shared atlas pages are the editor's), ${peak.audioNodes} audio nodes`);
   console.log(`  after every Stop: textures 0, audio nodes 0, canvases ${baselineCanvases} (the editor's own)`);
   console.log(`  heap after GC: ${mb(heapBaseline)} MB at cycle ${WARM_CYCLES}, ${mb(heapEnd)} MB at cycle ${CYCLES} (${pct(growth)}, limit +5%)`);
+}
+
+/* ---- 1b. the database editors through the UI (spec 8.6) ------------------ */
+{
+  const footer = page.locator('.db-footer');
+  await page.locator('[data-testid=databases] li', { hasText: 'Attacks' }).first().click();
+  await page.locator('.db-form .field', { hasText: 'Windup ms' }).locator('input').first().fill('901');
+  await footer.locator('button', { hasText: 'Save' }).click();
+  const saved = await page.evaluate(() => window.__editor.session.project.attacks[0].windupMs);
+  if (saved !== 901) failures.push(`database editor: a saved attack edit did not reach the project (windupMs ${saved})`);
+  await page.locator('[data-testid=databases] li', { hasText: 'Terrains' }).first().click();
+  const cost = page.locator('[data-testid=terrain-matrix] tbody tr').nth(1).locator('input[type=number]');
+  const before = await cost.inputValue();
+  await cost.fill('0');
+  await footer.locator('button', { hasText: 'Save' }).click();
+  const refused = (await footer.innerText()).includes('Not saved');
+  const kept = await page.evaluate(() => window.__editor.session.project.terrains[1].moveCost);
+  if (!refused || String(kept) !== before) failures.push(`database editor: an invalid terrain cost was not refused (cost now ${kept})`);
+  await footer.locator('button', { hasText: 'Cancel' }).click();
+  if ((await cost.inputValue()) !== before) failures.push('database editor: Cancel did not restore the draft');
+  await page.locator('button', { hasText: '← Map' }).click();
+  console.log(`database editors: an attack edit saved, an invalid terrain refused and cancelled${failures.some((f) => f.startsWith('database')) ? ' (FAILED)' : ''}`);
 }
 
 await page.goto(`${origin}/player/bench.html`);

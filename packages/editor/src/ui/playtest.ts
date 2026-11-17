@@ -8,6 +8,7 @@ import { PixiRenderer } from '@loreengine/render';
 import type { Client } from '@loreengine/player';
 import { serializeRepro } from '@loreengine/runtime';
 import type { ReproFile, ReproStart } from '@loreengine/runtime';
+import type { Action, Project } from '@loreengine/schema';
 import { World } from '@loreengine/runtime/view';
 import { blockedEdges } from '../core/overlays.ts';
 import { captureRepro, planPlaytest } from '../core/playtest.ts';
@@ -17,7 +18,16 @@ import { drawDebug } from './draw.ts';
 import type { DebugToggles } from './draw.ts';
 import type { EditorSession } from './session.ts';
 
+/** A database preview: a draft put into the playtest's copy, and actions played on the player every two seconds. */
+export interface PlaytestPreview {
+  label: string;
+  prepare?: (copy: Project) => void;
+  actions: Action[];
+}
+
 export class PlaytestController {
+  private nextPreviewTick = 30;
+  preview: PlaytestPreview | null = null;
   toggles: DebugToggles = { coords: false, blocked: false, hitboxes: true, sight: true, brains: true, paths: true };
   private world: World | null = null;
   private blocked: Float64Array = new Float64Array(0);
@@ -34,9 +44,9 @@ export class PlaytestController {
     private readonly host: HTMLElement,
   ) {}
 
-  static async start(session: EditorSession, host: HTMLElement, start: ReproStart | null): Promise<PlaytestController> {
+  static async start(session: EditorSession, host: HTMLElement, start: ReproStart | null, preview: PlaytestPreview | null = null): Promise<PlaytestController> {
     const seed = (Math.random() * 0x7fffffff) | 0; // a fresh session each Play; the repro keeps the seed
-    const plan = planPlaytest(session.project, seed, start);
+    const plan = planPlaytest(session.project, seed, start, preview?.prepare);
     const debug = document.createElement('canvas');
     debug.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:2';
     let controller: PlaytestController | null = null;
@@ -63,6 +73,7 @@ export class PlaytestController {
     });
     host.appendChild(debug);
     controller = new PlaytestController(session, plan, client, debug, host);
+    controller.preview = preview;
     return controller;
   }
 
@@ -105,6 +116,10 @@ export class PlaytestController {
   private frame(): void {
     if (this.stopped) return;
     const view = this.client.runtime.view;
+    if (this.preview && view.tick >= this.nextPreviewTick) {
+      this.client.runtime.enqueue({ type: 'test-actions', actions: this.preview.actions });
+      this.nextPreviewTick = view.tick + 120;
+    }
     if (view.currentMapId !== this.mapId) {
       this.mapId = view.currentMapId;
       const map = this.plan.project.maps.find((m) => m.id === this.mapId);
