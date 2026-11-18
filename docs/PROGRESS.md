@@ -54,13 +54,13 @@ npm run bench:render
 
 ## Needs E
 
-See `docs/DECISIONS_LOG.md`, section **Needs E** (N1–N9). **N6 is the one to read first:** the spec's wide-ramp clause and its continuity promise cannot both hold on a hex grid, and I chose continuity. **N9 next:** I implemented my recommendation (the editor owns the baked art and one playtest renderer), which moves those two things from the Playtest scope of §9.3 to the Editor scope; please confirm.
+See `docs/DECISIONS_LOG.md`, section **Needs E** (N1–N10). **N6 is the one to read first:** the spec's wide-ramp clause and its continuity promise cannot both hold on a hex grid, and I chose continuity. **N9 next:** I implemented my recommendation (the editor owns the baked art and one playtest renderer), which moves those two things from the Playtest scope of §9.3 to the Editor scope; please confirm.
 
 ## Known issues
 
 - **The session lost about 9.5 hours to two usage-limit pauses** (roughly 02:15 to 06:42 and 07:10 to 12:15 GMT+7). Elapsed times in the table count working time only. Chunk 8 was built after the hard stop, at E's request.
 - Git pushes were refused (HTTP 403) for the first ~12 minutes of the session, until GitHub access was granted. Branch pushes work since; **tag pushes are still refused**, so `chunk-N-green` tags are local to the session and each green commit is listed by SHA in the table above (N5).
-- **The spike review gate is open.** `docs/spike/README.md` lists the scenes and what the spike found. The screenshots now show the baked placeholder art.
+- **The spike review gate:** E asked for a higher camera angle (Civ VI / Beyond Earth); the camera is now pitched 55°, awaiting E's confirmation of the angle (N10). `docs/spike/README.md` lists the scenes, what the spike found, and the angle comparison.
 - **Chunk 7 simplifications** (each logged): the occlusion silhouette is not masked to the covered part (D151); flashing-as-outline is stored but drawn as a tint (D152); a telegraph also tints units standing in front rows of its area (D150).
 - **The standalone player page still grows about 15 KB of heap per start/stop** (PixiJS keeps a little per renderer and per new texture; N9). It is reported by `check:browser`, not gated: the spec's gate is the editor's playtest, which passes. A shipped game starts its client once.
 - **Fixed in chunk 8, found by the leak gate (D163):** destroyed terrain strips and sprites kept their GPU buffers and graphics contexts. Short-lived renderers hid it; the editor's canvas would have grown with every edit.
@@ -75,8 +75,8 @@ See `docs/DECISIONS_LOG.md`, section **Needs E** (N1–N9). **N6 is the one to r
 
 **All nine chunks of the kickoff are built and green.** Phase 6 and later are out of scope for this build (kickoff), so the next steps are E's:
 
-1. **The review gates.** The render spike (`docs/spike/README.md`) and the editor (`docs/editor/README.md`) have screenshots and notes for review.
-2. **Needs E** in `docs/DECISIONS_LOG.md`, N1 to N9: N6 (wide ramps) first, then N9 (the editor owns the baked art and one playtest renderer, a §9.3 scope change).
+1. **The review gates.** *Render spike — E's review (18 Nov):* "the hex grids should have a higher isometric angle; use Civilization VI or Beyond Earth for reference." Done: the camera is pitched 55° (D192), the spike and editor screenshots are regenerated, and `docs/spike/camera-pitch-*.png` compare 27°, 45°, 55° and 65°. **E to confirm the angle (N10).** *Editor review:* still open (`docs/editor/README.md`).
+2. **Needs E** in `docs/DECISIONS_LOG.md`, N1 to N10: N6 (wide ramps) first, then N9 (the editor owns the baked art and one playtest renderer, a §9.3 scope change).
 3. **The budgets on E's machine.** The tick bench (`npm run bench`) and the render bench were measured in this cloud container with software WebGL. The 8 ms render budget needs `npm run build && npm run bench:render` on a machine with a GPU; it prints the WebGL renderer it used.
 4. **Tags.** `chunk-1-green` to `chunk-9-green` exist only in this session's clone (tag pushes were refused all session, N5); the green commits are listed by SHA in the table above, and E can tag them.
 

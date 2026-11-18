@@ -136,7 +136,7 @@ export function drawEditorOverlays(ctx: CanvasRenderingContext2D, p: Projector, 
       ctx.stroke();
     }
   }
-  if (o.rampPreview) {
+  if (o.rampPreview && o.rampPreview.dir >= 1 && o.rampPreview.dir <= 6) {
     const { cell, dir } = o.rampPreview;
     const x = o.world.centerX(cell);
     const y = o.world.centerY(cell);

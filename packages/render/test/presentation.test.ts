@@ -15,7 +15,7 @@ import { MAX_PAGE, bakeAtlas, frameNameOf, packFrames, svgAnchor, svgSize } from
 import type { BakeTools, SvgSource } from '../src/bake.ts';
 import { DrawList } from '../src/drawlist.ts';
 import { Feedback, MAX_PARTICLES, MAX_SHAKE } from '../src/feedback.ts';
-import { createCamera } from '../src/projection.ts';
+import { DEFAULT_CAMERA_PITCH, createCamera, setCameraPitch, setProjectionRatios } from '../src/projection.ts';
 import { isOccluded, silhouettes } from '../src/silhouette.ts';
 import { maxSurface } from '../src/terrain.ts';
 
@@ -397,8 +397,12 @@ describe('the feedback system', () => {
 
   it('the occlusion silhouette: a unit behind a cliff is covered; one on the plateau edge or in the open is not', () => {
     const p = buildElevation();
-    const spot = (cell: { col: number; row: number }) => {
+    const spot = (cell: { col: number; row: number }, plateauLevel = 2) => {
       const q = buildElevation();
+      const m = q.maps[0]!;
+      for (let row = A.plateau.row; row < A.plateau.row + A.plateau.h; row++) {
+        for (let col = A.plateau.col; col < A.plateau.col + A.plateau.w; col++) m.layers.level[row * m.width + col] = plateauLevel;
+      }
       const c = cellCenter(cell.col, cell.row);
       q.maps[0]!.playerStart = { x: c.x, y: c.y, facing: 0 };
       q.maps[0]!.placements = [];
@@ -414,8 +418,21 @@ describe('the feedback system', () => {
       return { occluded: isOccluded(rt.view, cam, list, 0), count: silhouettes(rt.view, cam, list, out), first: out[0] };
     };
     void p;
-    expect(spot(A.behindCliff)).toEqual({ occluded: true, count: 1, first: 0 });
-    expect(spot(A.plateauEdge).occluded).toBe(false);
-    expect(spot(A.playerStart)).toMatchObject({ occluded: false, count: 0 });
+    try {
+      // The spike's projection (squash 0.5, heights unscaled; D192): the level-2 plateau covers the unit right behind it.
+      setProjectionRatios(0.5, 1);
+      expect(spot(A.behindCliff)).toEqual({ occluded: true, count: 1, first: 0 });
+      expect(spot(A.plateauEdge).occluded).toBe(false);
+      expect(spot(A.playerStart)).toMatchObject({ occluded: false, count: 0 });
+      // The default, steeper camera sees over that plateau (a cliff of h hides about 0.7 h behind it);
+      // raised to level 6 (3 units) it covers the same unit again.
+      setCameraPitch(DEFAULT_CAMERA_PITCH);
+      expect(spot(A.behindCliff).occluded).toBe(false);
+      expect(spot(A.behindCliff, 6)).toEqual({ occluded: true, count: 1, first: 0 });
+      expect(spot(A.plateauEdge, 6).occluded).toBe(false);
+      expect(spot(A.playerStart)).toMatchObject({ occluded: false, count: 0 });
+    } finally {
+      setCameraPitch(DEFAULT_CAMERA_PITCH);
+    }
   });
 });

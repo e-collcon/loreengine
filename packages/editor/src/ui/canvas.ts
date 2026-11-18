@@ -218,7 +218,8 @@ export class CanvasController {
       sight,
       brush: this.brushUnder(this.hoverCell),
       brushColor: s.tool === 'region' && s.eraseRegion ? '#ff6b5e' : '#fff27a',
-      rampPreview: drag?.kind === 'layer' && drag.rampCell >= 0 ? { cell: drag.rampCell, dir: map.layers.ramp[drag.rampCell]! } : null,
+      // No arrow until the drag has chosen a direction (a ramp of 0 is no ramp).
+      rampPreview: drag?.kind === 'layer' && drag.rampCell >= 0 && map.layers.ramp[drag.rampCell]! > 0 ? { cell: drag.rampCell, dir: map.layers.ramp[drag.rampCell]! } : null,
     });
     if (selected >= 0) {
       const e = this.preview.entities;

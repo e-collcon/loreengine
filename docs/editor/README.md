@@ -1,6 +1,6 @@
 # Editor — review screenshots (chunks 8 and 9)
 
-The editor (spec section 8) running its production build in headless Chromium at device pixel ratio 2, on a fresh Emberfall. The art is the fixtures' placeholder SVGs, baked once by the editor and lent to the canvas and every playtest (DECISIONS N9, D162).
+The editor (spec section 8) running its production build in headless Chromium at device pixel ratio 2, on a fresh Emberfall, with the camera pitched 55° (D192). The art is the fixtures' placeholder SVGs, baked once by the editor and lent to the canvas and every playtest (DECISIONS N9, D162).
 
 | File | What to look at |
 |---|---|

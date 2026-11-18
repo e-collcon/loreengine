@@ -2,7 +2,7 @@
  * Render spike tests (spec 6.11). Everything here runs on the draw list,
  * the strip geometry, and the picking function: no GPU, no DOM.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { ELEVATION, buildElevation, buildEmberfall, cellCenter, id } from '@loreengine/fixtures';
 import { createRuntime, emptyInput } from '@loreengine/runtime';
 import type { Runtime } from '@loreengine/runtime';
@@ -10,13 +10,16 @@ import type { Project } from '@loreengine/schema';
 import { DrawList, ITEM_ENTITY, ITEM_STRIP } from '../src/drawlist.ts';
 import { pickEntity, pickTerrain } from '../src/picking.ts';
 import type { TerrainPick } from '../src/picking.ts';
-import { ISO_RATIO, clampZoom, createCamera, followCamera, projectX, projectY, screenX, screenY, visibleRows, worldXAt, worldYAt } from '../src/projection.ts';
+import { DEFAULT_CAMERA_PITCH, HEIGHT_RATIO, ISO_RATIO, clampZoom, createCamera, followCamera, projectX, projectY, screenX, screenY, setCameraPitch, setProjectionRatios, visibleRows, worldXAt, worldYAt } from '../src/projection.ts';
 import type { Camera } from '../src/projection.ts';
 import { colorOf, footprintRadius, shade, spriteMetrics } from '../src/sprites.ts';
 import { CAMERA_FACING, TOP_INDICES, buildStrip, maxSurface } from '../src/terrain.ts';
 
 const A = ELEVATION.terraces;
 const PPU = 64;
+/** Marks the spike's first projection (squash 0.5, heights unscaled; D192). */
+const SPIKE_PITCH = -1;
+afterEach(() => setCameraPitch(DEFAULT_CAMERA_PITCH));
 const cellOf = (c: { col: number; row: number }): number => c.row * A.width + c.col;
 
 function start(mutate?: (p: Project) => void): Runtime {
@@ -49,17 +52,23 @@ describe('[P3B.projection.world-to-screen] the hex-iso projection', () => {
     expect(at(cam, 10, 20, 0)).toEqual([400, 300]); // the camera's focus is the screen center
     expect(at(cam, 11, 20, 0)).toEqual([400 + 64, 300]);
     expect(at(cam, 10, 21, 0)).toEqual([400, 300 + 64 * ISO_RATIO]);
-    expect(at(cam, 10, 20, 1)).toEqual([400, 300 - 64]); // height lifts straight up
+    // Height lifts straight up, by cos(pitch) of a world unit (D192).
+    expect(at(cam, 10, 20, 1)[0]).toBe(400);
+    expect(at(cam, 10, 20, 1)[1]).toBeCloseTo(300 - 64 * HEIGHT_RATIO, 9);
     cam.zoom = 2;
-    expect(at(cam, 11, 21, 0.5)).toEqual([400 + 128, 300 + 64 - 64]);
+    expect(at(cam, 11, 21, 0.5)[0]).toBe(400 + 128);
+    expect(at(cam, 11, 21, 0.5)[1]).toBeCloseTo(300 + 128 * ISO_RATIO - 64 * HEIGHT_RATIO, 9);
+    // The pitch is a real camera's: ground depth by sin, height by cos.
+    expect(ISO_RATIO).toBeCloseTo(Math.sin((DEFAULT_CAMERA_PITCH * Math.PI) / 180), 12);
+    expect(HEIGHT_RATIO).toBeCloseTo(Math.cos((DEFAULT_CAMERA_PITCH * Math.PI) / 180), 12);
   });
 
   it('reads pixelsPerUnit from the project settings', () => {
     const cam = createCamera(800, 600);
     expect(screenX(cam, 32, 1)).toBe(400 + 32);
-    expect(screenY(cam, 32, 0, 1)).toBe(300 - 32);
+    expect(screenY(cam, 32, 0, 1)).toBeCloseTo(300 - 32 * HEIGHT_RATIO, 9);
     expect(projectX(2, 100)).toBe(200);
-    expect(projectY(2, 0.5, 100)).toBe((2 * ISO_RATIO - 0.5) * 100);
+    expect(projectY(2, 0.5, 100)).toBeCloseTo((2 * ISO_RATIO - 0.5 * HEIGHT_RATIO) * 100, 9);
   });
 
   it('worldXAt / worldYAt invert the projection at any height', () => {
@@ -124,7 +133,7 @@ describe('[P3B.terrain.frames] terrain strips', () => {
     expect(Array.from(flat.heights)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     const c = cellCenter(A.plateau.col, A.plateau.row);
     expect(flat.vertices[0]).toBeCloseTo(c.x * PPU, 3);
-    expect(flat.vertices[1]).toBeCloseTo((c.y * ISO_RATIO - 1) * PPU, 3);
+    expect(flat.vertices[1]).toBeCloseTo((c.y * ISO_RATIO - 1 * HEIGHT_RATIO) * PPU, 3);
     // The lower stacked ramp rises east from level 0 to level 1 (0 .. 0.5 world units).
     const ramp = strip(A.rampLow.row).tops[A.rampLow.col]!;
     const h = Array.from(ramp.heights).map((v) => Math.round(v * 1000) / 1000);
@@ -142,8 +151,8 @@ describe('[P3B.terrain.frames] terrain strips', () => {
       expect([f.topA, f.topB, f.bottomA, f.bottomB]).toEqual([1, 1, 0, 0]);
       expect(f.frame).toEqual(project.terrains[2]!.cliff);
       expect(f.vertices).toHaveLength(8);
-      // Bottom vertices sit one world unit (64 px) below the top ones.
-      expect(f.vertices[7]! - f.vertices[1]!).toBeCloseTo(64, 3);
+      // Bottom vertices sit one world unit (64 px at zoom 1, by cos(pitch)) below the top ones.
+      expect(f.vertices[7]! - f.vertices[1]!).toBeCloseTo(64 * HEIGHT_RATIO, 3);
     }
     // Interior plateau rows have no faces (their neighbors are at the same height) ...
     expect(strip(A.plateau.row + 1).faces.filter((f) => f.cell === cellOf({ col: 8, row: A.plateau.row + 1 }))).toEqual([]);
@@ -227,7 +236,7 @@ describe('[P3B.depth.order] ★ depth order, on the draw list', () => {
     expect(unit).toBeLessThan(list.indexOfStrip(A.plateauEdge.row + 1));
     // Its feet are drawn at the plateau's height, one world unit above the ground position.
     const c = cellCenter(A.plateauEdge.col, A.plateauEdge.row);
-    expect(list.footY[entityOf(rt, 'plateau-edge')]).toBeCloseTo(screenY(cam, PPU, c.y, 0) - 64 * cam.zoom, 6);
+    expect(list.footY[entityOf(rt, 'plateau-edge')]).toBeCloseTo(screenY(cam, PPU, c.y, 0) - 64 * HEIGHT_RATIO * cam.zoom, 6);
   });
 
   it('a unit on a ramp is drawn after the ramp\'s strip, at the ramp\'s height', () => {
@@ -346,16 +355,24 @@ describe('[P3B.picking.height-aware] ★ height-aware picking', () => {
   };
 
   it('points over a plateau\'s top return the plateau cell, not the low hex under its flat footprint', () => {
-    for (const cell of [A.plateauEdge, { col: 7, row: 3 }, { col: 9, row: 5 }]) {
-      for (const [dx, dy] of [[0, 0], [0.5, 0.2], [-0.4, -0.5], [0, 0.7]] as const) {
-        const [sx, sy] = onTop(cell, dx, dy);
-        const hit = pick(sx, sy)!;
-        expect(hit.cell).toBe(cellOf(cell));
-        expect(hit.z).toBeCloseTo(1, 6);
-        expect(hit.y).toBeCloseTo(cellCenter(cell.col, cell.row).y + dy, 3);
-        // A flat pick at the same screen point would have landed two rows further north, on other cells.
-        const flatY = worldYAt(cam, PPU, sy, 0);
-        expect(world.cellAt(worldXAt(cam, PPU, sx), flatY)).not.toBe(cellOf(cell));
+    // At the spike's projection (as first written), and at the default and a steeper camera (D192).
+    for (const pitch of [SPIKE_PITCH, DEFAULT_CAMERA_PITCH, 70]) {
+      if (pitch === SPIKE_PITCH) setProjectionRatios(0.5, 1);
+      else setCameraPitch(pitch);
+      for (const cell of [A.plateauEdge, { col: 7, row: 3 }, { col: 9, row: 5 }]) {
+        for (const [dx, dy] of [[0, 0], [0.5, 0.2], [-0.4, -0.5], [0, 0.7]] as const) {
+          const [sx, sy] = onTop(cell, dx, dy);
+          const hit = pick(sx, sy)!;
+          expect(hit.cell, `pitch ${pitch}`).toBe(cellOf(cell));
+          expect(hit.z).toBeCloseTo(1, 6);
+          expect(hit.y).toBeCloseTo(cellCenter(cell.col, cell.row).y + dy, 3);
+          // At the spike's camera a flat pick at the same screen point would have landed two rows
+          // further north, on other cells. Steeper cameras lift less, so this only holds there.
+          if (pitch === SPIKE_PITCH) {
+            const flatY = worldYAt(cam, PPU, sy, 0);
+            expect(world.cellAt(worldXAt(cam, PPU, sx), flatY)).not.toBe(cellOf(cell));
+          }
+        }
       }
     }
   });

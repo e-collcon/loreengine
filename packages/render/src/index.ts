@@ -10,6 +10,11 @@ export { pickTerrain, pickEntity } from './picking.ts';
 export type { TerrainPick } from './picking.ts';
 export {
   ISO_RATIO,
+  HEIGHT_RATIO,
+  CAMERA_PITCH,
+  DEFAULT_CAMERA_PITCH,
+  setCameraPitch,
+  setProjectionRatios,
   MIN_ZOOM,
   MAX_ZOOM,
   clampZoom,

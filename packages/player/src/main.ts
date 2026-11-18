@@ -7,11 +7,12 @@
  *   ?pick=8,4              pick the terrain under that cell's top, as a click there would
  *   ?start=37,22           start the player on that cell
  *   ?hud=0                 hide the debug readout
+ *   ?pitch=55              camera angle in degrees above the horizon (`spike`: the spike's first camera)
  *
  * `window.__lore` exposes the client for the spike screenshot script.
  */
 import { buildElevation, buildEmberfall, cellCenter, emberfallBlobs } from '@loreengine/fixtures';
-import { screenX, screenY } from '@loreengine/render';
+import { screenX, screenY, setCameraPitch, setProjectionRatios } from '@loreengine/render';
 import type { TerrainPick } from '@loreengine/render';
 import { startClient } from './client.ts';
 import type { Client } from './client.ts';
@@ -23,6 +24,9 @@ declare global {
 }
 
 const params = new URLSearchParams(location.search);
+// ?pitch=55 compares camera angles (degrees above the horizon).
+if (params.get('pitch') === 'spike') setProjectionRatios(0.5, 1); // the render spike's first camera
+else if (params.has('pitch')) setCameraPitch(Number(params.get('pitch')));
 const host = document.getElementById('app')!;
 const project = params.get('fixture') === 'elevation' ? buildElevation() : buildEmberfall();
 
