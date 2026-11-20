@@ -62,8 +62,7 @@ const view = client.runtime.view;
 const cellText = (cell: number): string => {
   const col = cell % view.world.width;
   const row = Math.floor(cell / view.world.width);
-  const ramp = view.world.ramp(cell);
-  return `(${col}, ${row})  level ${view.world.level(cell)}${ramp ? `  ramp toward ${ramp}` : ''}  ${project.terrains[view.world.terrain(cell)]!.name}`;
+  return `(${col}, ${row})  level ${view.world.level(cell)}  ${project.terrains[view.world.terrain(cell)]!.name}`;
 };
 
 function readout(c: Client): string {

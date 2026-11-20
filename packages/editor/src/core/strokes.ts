@@ -3,35 +3,17 @@
  * it while dragging) and becomes one command when the pointer is released
  * (spec 8.5, 8.7).
  */
-import { HEX_DIRS, axialQ, dirUnitX, dirUnitY, offsetCol } from '@loreengine/hexmath';
-import type { HexDir } from '@loreengine/hexmath';
+import { axialQ, offsetCol } from '@loreengine/hexmath';
 import type { Id, MapDef, Project } from '@loreengine/schema';
 import { LayerEdit, RegionEdit, mapOf } from './commands.ts';
 
-/** The direction from (fromX, fromY) that points most nearly at (toX, toY). */
-export function nearestHexDir(fromX: number, fromY: number, toX: number, toY: number): HexDir {
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  let best: HexDir = 1;
-  let bestDot = -Infinity;
-  for (const dir of HEX_DIRS) {
-    const dot = dx * dirUnitX(dir) + dy * dirUnitY(dir);
-    if (dot > bestDot) {
-      bestDot = dot;
-      best = dir;
-    }
-  }
-  return best;
-}
-
-/** Edits a map's terrain, level and ramp layers; remembers each touched cell's first value. */
+/** Edits a map's terrain and level layers; remembers each touched cell's first value. */
 export class LayerStroke {
   readonly map: MapDef;
   private readonly slot = new Map<number, number>();
   private readonly cells: number[] = [];
   private readonly beforeTerrain: number[] = [];
   private readonly beforeLevel: number[] = [];
-  private readonly beforeRamp: number[] = [];
   private paletteAdded: Id<'terrain'> | null = null;
   private done = false;
 
@@ -51,12 +33,11 @@ export class LayerStroke {
 
   private touch(cell: number): void {
     if (this.slot.has(cell)) return;
-    const { terrain, level, ramp } = this.map.layers;
+    const { terrain, level } = this.map.layers;
     this.slot.set(cell, this.cells.length);
     this.cells.push(cell);
     this.beforeTerrain.push(terrain[cell]!);
     this.beforeLevel.push(level[cell]!);
-    this.beforeRamp.push(ramp[cell]!);
   }
 
   /** The palette index for a terrain, appending it to the map's palette (once per stroke) when missing. */
@@ -90,21 +71,14 @@ export class LayerStroke {
     }
   }
 
-  /** Set cells to one level and make them flat. */
+  /** Set cells to one level. */
   flatten(cells: readonly number[], to: number): void {
-    const { level, ramp } = this.map.layers;
+    const { level } = this.map.layers;
     const clamped = Math.max(0, Math.min(this.maxLevel, to));
     for (const cell of cells) {
       this.touch(cell);
       level[cell] = clamped;
-      ramp[cell] = 0;
     }
-  }
-
-  /** Make `cell` a ramp rising toward `dir` (0 clears it); its level stays the low edge. */
-  setRamp(cell: number, dir: HexDir | 0): void {
-    this.touch(cell);
-    this.map.layers.ramp[cell] = dir;
   }
 
   /** Undo the live edits and drop the stroke. */
@@ -128,25 +102,23 @@ export class LayerStroke {
   }
 
   private edit(all: boolean): LayerEdit {
-    const { terrain, level, ramp } = this.map.layers;
+    const { terrain, level } = this.map.layers;
     const keep: number[] = [];
     for (let i = 0; i < this.cells.length; i++) {
       const cell = this.cells[i]!;
-      if (all || terrain[cell] !== this.beforeTerrain[i] || level[cell] !== this.beforeLevel[i] || ramp[cell] !== this.beforeRamp[i]) keep.push(i);
+      if (all || terrain[cell] !== this.beforeTerrain[i] || level[cell] !== this.beforeLevel[i]) keep.push(i);
     }
     const n = keep.length;
     const cells = new Int32Array(n);
-    const before = { terrain: new Uint16Array(n), level: new Uint8Array(n), ramp: new Uint8Array(n) };
-    const after = { terrain: new Uint16Array(n), level: new Uint8Array(n), ramp: new Uint8Array(n) };
+    const before = { terrain: new Uint16Array(n), level: new Uint8Array(n) };
+    const after = { terrain: new Uint16Array(n), level: new Uint8Array(n) };
     keep.forEach((i, k) => {
       const cell = this.cells[i]!;
       cells[k] = cell;
       before.terrain[k] = this.beforeTerrain[i]!;
       before.level[k] = this.beforeLevel[i]!;
-      before.ramp[k] = this.beforeRamp[i]!;
       after.terrain[k] = terrain[cell]!;
       after.level[k] = level[cell]!;
-      after.ramp[k] = ramp[cell]!;
     });
     // A palette entry only counts when some cell uses it; `cancel` reverts it either way.
     const added = this.paletteAdded !== null && (all || n > 0) ? this.paletteAdded : null;

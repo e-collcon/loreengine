@@ -4,11 +4,12 @@
  * the same project as a file, kept in step by `tests/fixtures.test.ts`.
  *
  *   Village (level 0)   an elder to talk to, and a lava strip that hurts.
- *   Plateau (level 2)   reached by two stacked ramps; a sentry watches from
- *                       the cliff edge, then comes down the ramps to chase.
+ *   Plateau (level 2)   reached by a two-cell-wide step at level 1 (one level
+ *                       apart is a slope; two is a cliff); a sentry watches
+ *                       from the cliff edge, then comes down the step to chase.
  *   Boss arena          a mini-boss with a telegraphed slam and a sweep; at
  *                       50% health a trigger enrages it; its death is victory.
- *   Side area           one deliberately broken ramp, for the lint test.
+ *   Side area           a level-2 ledge nothing reaches, for the lint test.
  *
  * Art is placeholder: the atlas pages are empty until the Phase 3 bake.
  * Emberfall carries no attributes, because the foundation has none.
@@ -46,15 +47,14 @@ export const EMBERFALL = {
   pond: { col: 3, row: 19, w: 3, h: 2 } satisfies Rect,
   village: { col: 2, row: 18, w: 13, h: 12 } satisfies Rect,
   plateau: { col: 20, row: 4, w: 11, h: 9 } satisfies Rect,
-  /** Two stacked ramps rising east (dir 1) onto the plateau: level 0 -> 1 -> 2. */
-  rampLow: { col: 18, row: 10 },
-  rampHigh: { col: 19, row: 10 },
+  /** The way up: level-1 cells between the level-0 ground and the level-2 plateau. */
+  step: { col: 19, row: 10, w: 1, h: 2 } satisfies Rect,
   sentry: { col: 22, row: 11 },
   arena: { col: 34, row: 16, w: 12, h: 13 } satisfies Rect,
   arenaGate: { col: 34, row: 22 },
   boss: { col: 41, row: 22 },
-  /** A ramp rising east into level-0 ground: its high edge leads nowhere. */
-  brokenRamp: { col: 6, row: 6 },
+  /** A level-2 ledge with cliffs all round: walkable, but unreachable (the lint fixture). */
+  ledge: { col: 4, row: 5, w: 3, h: 2 } satisfies Rect,
 } as const;
 
 const T = { grass: 0, dirt: 1, stone: 2, lava: 3, water: 4, rock: 5 } as const;
@@ -507,12 +507,11 @@ export function buildEmberfall(): Project {
   paint.fill(E.pond, T.water, 0);
   paint.fill(E.lava, T.lava, 0);
   paint.fill(E.plateau, T.stone, 2);
-  paint.setRamp(E.rampLow.col, E.rampLow.row, T.stone, 0, 1);
-  paint.setRamp(E.rampHigh.col, E.rampHigh.row, T.stone, 1, 1);
+  paint.fill(E.step, T.stone, 1);
   paint.fill(E.arena, T.stone, 0);
   paint.frame(E.arena, T.rock, 0);
   paint.fill({ col: E.arenaGate.col, row: E.arenaGate.row, w: 1, h: 1 }, T.stone, 0);
-  paint.setRamp(E.brokenRamp.col, E.brokenRamp.row, T.dirt, 0, 1);
+  paint.fill(E.ledge, T.dirt, 2);
 
   const place = (name: string, archetype: string, cell: { col: number; row: number }, facing: number): EntityPlacement => ({
     key: id('placement', name),

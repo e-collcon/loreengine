@@ -13,8 +13,9 @@ export const OVERLAYS = ['levels', 'blocked', 'lint', 'regions', 'sight'] as con
 export type Overlay = (typeof OVERLAYS)[number];
 
 /**
- * Edges a walker cannot cross although both cells are walkable: cliffs and
- * ramp sides. Each edge once, as x0, y0, z0, x1, y1, z1 on the higher side's rim.
+ * Edges a walker cannot cross although both cells are walkable: cliffs, two
+ * or more levels apart. Each edge once, as x0, y0, z0, x1, y1, z1 on the
+ * higher side's rim.
  */
 export function blockedEdges(world: World): Float64Array {
   const out: number[] = [];

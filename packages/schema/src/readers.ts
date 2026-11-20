@@ -59,7 +59,7 @@ const rows: readonly Row[] = [
 
   /* ---- Maps ------------------------------------------------------------- */
   ['runtime/world', 'P3A.world.cell-at', 'MapDef.width MapDef.height'],
-  ['runtime/world', 'P3A.connects.table', 'MapDef.terrainPalette[] MapDef.layers.terrain MapDef.layers.level MapDef.layers.ramp'],
+  ['runtime/world', 'P3A.connects.table', 'MapDef.terrainPalette[] MapDef.layers.terrain MapDef.layers.level'],
   ['runtime/session', 'P3A.lifecycle.player-spawn', 'MapDef.playerStart.x MapDef.playerStart.y MapDef.playerStart.facing'],
   ['runtime/session', 'P3A.lifecycle.bgm', 'MapDef.bgm'],
   ['runtime/session', 'P3A.lifecycle.save-delta', 'EntityPlacement.key'],

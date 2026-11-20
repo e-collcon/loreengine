@@ -4,6 +4,7 @@
  * reachable from here. Everything a `RuntimeView` returns is a value, a
  * read-only authored object, or a visitor callback.
  */
+import type { EdgeType } from './world.ts';
 import type { HexDir } from '@loreengine/hexmath';
 import type { ComponentData, MovementMode, Project, VariableValue } from '@loreengine/schema';
 import type { DiagnosticEntry } from './diagnostics.ts';
@@ -78,13 +79,11 @@ export interface WorldView {
   cellAt(x: number, y: number): number;
   /** Surface height in world units. */
   surfaceHeight(x: number, y: number): number;
-  /** Height of a cell's edge in levels, or 'sloped' for a ramp's side edges. */
-  edgeHeight(cell: number, dir: HexDir): number | 'sloped';
+  /** The edge of a cell toward `dir`: flat, slope (one level apart), cliff (more), or 'none' off the map. */
+  edgeType(cell: number, dir: HexDir): EdgeType | 'none';
   connects(a: number, b: number, mode: MovementMode): boolean;
   /** Cliff level of a cell, 0..maxLevel. */
   level(cell: number): number;
-  /** 0, or the HexDir a ramp rises toward. */
-  ramp(cell: number): number;
   /** Index into `project.terrains`. */
   terrain(cell: number): number;
   centerX(cell: number): number;
@@ -146,7 +145,8 @@ export interface RuntimeView {
   stateHash(): string;
 }
 
-export { World, edgeLevel, edgesConnect, modeBit, MODE_WALK, MODE_SWIM, MODE_FLY, SLOPED } from './world.ts';
+export { World, edgeType, levelsConnect, terraceFraction, modeBit, MODE_WALK, MODE_SWIM, MODE_FLY, SOLID_FACTOR, TERRACES, EDGE_FLAT, EDGE_SLOPE, EDGE_CLIFF } from './world.ts';
+export type { EdgeType } from './world.ts';
 export { lintMap, lintProject, MAX_UNREACHABLE_AREAS } from './lint.ts';
 export { castTerrain } from './sight.ts';
 export { FLY_LEVELS } from './movement.ts';
@@ -155,5 +155,5 @@ export type { LintWarning, LintCode } from './lint.ts';
 
 // Hex geometry the renderer needs to build terrain meshes. `render` may import
 // only `schema` and this entry point (spec 4.3), so the pure helpers pass through here.
-export { HEX_DIRS, cornerOffsetX, cornerOffsetY, edgeCornerA, edgeCornerB, oppositeDir } from '@loreengine/hexmath';
+export { HEX_DIRS, cornerOffsetX, cornerOffsetY, dirUnitX, dirUnitY, edgeCornerA, edgeCornerB, oppositeDir } from '@loreengine/hexmath';
 export type { HexDir } from '@loreengine/hexmath';

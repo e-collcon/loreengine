@@ -3,7 +3,7 @@ import { ELEVATION, buildElevation } from '@loreengine/fixtures';
 import { RESTRICT_MOVE } from '../src/entities.ts';
 import { createSim } from '../src/runtime.ts';
 import type { Sim } from '../src/sim.ts';
-import { MODE_FLY, MODE_SWIM, MODE_WALK } from '../src/world.ts';
+import { MODE_FLY, MODE_SWIM, MODE_WALK, SOLID_FACTOR, TERRACES } from '../src/world.ts';
 import { OPTS, TERRAIN, V, addVar, cellCenter, cellOfEntity, id, indexOfKey, run, runWith, stageSim, trigger } from './helpers.ts';
 
 const T = TERRAIN;
@@ -187,25 +187,32 @@ describe('[P4A.collision.circles] collision', () => {
     expect(sim.entities.y[0]).toBeGreaterThan(-1 + 0.3);
   });
 
-  it('walkers always stand on the surface: z follows a ramp continuously', () => {
+  it('walkers always stand on the surface: z follows the terraced slopes continuously', () => {
     const p = buildElevation();
     const A = ELEVATION.terraces;
-    const start = cellCenter(A.rampLow.col - 2, A.rampLow.row);
+    const start = cellCenter(A.step.col - 2, A.step.row + 1);
     p.maps[0]!.playerStart = { x: start.x, y: start.y, facing: 0 };
     p.maps[0]!.placements = [];
     const sim = createSim(p, null, OPTS);
     const e = sim.entities;
+    // The steepest the surface gets: a terrace rise, a third of a level over a fifth of a bridge.
+    const lh = p.settings.levelHeight;
+    const span = 2 * (Math.sqrt(3) / 2) * p.settings.hexSize * (1 - SOLID_FACTOR);
+    const steepest = lh / (TERRACES + 1) / (span / (2 * TERRACES + 1));
     let last = 0;
+    let lastX = e.x[0]!;
     let top = 0;
     for (let t = 0; t < 140; t++) {
       runWith(sim, 1, { move: { x: 1, y: 0 } });
       expect(e.z[0]).toBe(sim.world!.surfaceHeight(e.x[0]!, e.y[0]!));
       expect(e.z[0]! - last).toBeGreaterThanOrEqual(0);
-      expect(e.z[0]! - last).toBeLessThan(0.03); // no step anywhere on the way up
+      // No jump anywhere on the way up: z never climbs faster than the steepest rise allows.
+      expect(e.z[0]! - last).toBeLessThanOrEqual(steepest * Math.abs(e.x[0]! - lastX) + 1e-9);
       last = e.z[0]!;
+      lastX = e.x[0]!;
       top = Math.max(top, e.z[0]!);
     }
-    expect(top).toBe(1); // up both stacked ramps onto the level-2 plateau
+    expect(top).toBe(1); // up the step onto the level-2 plateau
   });
 
   it('overlapping solid colliders are pushed apart, weighted by mass', () => {
@@ -296,7 +303,7 @@ describe('[P4A.cliffs.hold] ★ cliffs hold', () => {
       s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
       return s / 4294967296;
     };
-    // Spots hugging the plateau's rim (inside and outside), the ramps, and the terrace.
+    // Spots hugging the plateau's rim (inside and outside), the step, and the terrace.
     const spots: [number, number][] = [];
     for (let col = A.plateau.col - 1; col <= A.plateau.col + A.plateau.w + 3; col++) {
       for (let row = A.plateau.row - 1; row <= A.plateau.row + A.plateau.h + 1; row++) {
@@ -331,7 +338,7 @@ describe('[P4A.cliffs.hold] ★ cliffs hold', () => {
     }
     expect(knocks).toBe(10_000);
     expect(crossings).toBe(0);
-    // Levels do change, but only by way of the ramps.
+    // Levels do change, but only across slopes.
     expect(levelChanges).toBeGreaterThan(0);
     expect(levelChanges).toBeLessThan(2000);
   });
@@ -349,7 +356,7 @@ describe('[P4A.events.region] region events', () => {
       trigger({ type: 'region-exited', regionId: plateau, who: { by: 'player' } }, [addVar(V.lucky, 1)]),
       trigger({ type: 'region-entered', regionId: plateau, who: { by: 'tag', tag: 'dummy' } }, [addVar(V.visits, 1)]),
     );
-    const start = cellCenter(A.rampLow.col - 1, A.rampLow.row);
+    const start = cellCenter(A.step.col - 1, A.step.row + 1);
     p.maps[0]!.playerStart = { x: start.x, y: start.y, facing: 0 };
     return createSim(p, null, OPTS);
   };
@@ -357,10 +364,10 @@ describe('[P4A.events.region] region events', () => {
 
   it('walking into a region raises region-entered once; walking out raises region-exited once', () => {
     const sim = withCounters();
-    runWith(sim, 100, { move: { x: 1, y: 0 } }); // up the ramps onto the plateau
+    runWith(sim, 100, { move: { x: 1, y: 0 } }); // up the step onto the plateau
     expect(sim.world!.level[cellOfEntity(sim, 0)]).toBe(2);
     expect(counts(sim)).toEqual([1, 0, 0]);
-    runWith(sim, 60, { move: { x: 1, y: 0 } }); // wandering inside changes nothing
+    runWith(sim, 20, { move: { x: 0, y: -1 } }); // wandering inside changes nothing (east, the terrace is a slope away now)
     expect(counts(sim)).toEqual([1, 0, 0]);
     runWith(sim, 200, { move: { x: -1, y: 0 } }); // back down
     expect(counts(sim)).toEqual([1, 1, 0]);

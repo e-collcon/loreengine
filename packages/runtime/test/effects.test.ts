@@ -406,7 +406,7 @@ describe('health, death and terrain contact', () => {
 });
 
 describe('[P4B.act.scripted-jump] scripted jumps', () => {
-  /** Low ground on the left, a level-4 plateau with no ramp on the right. */
+  /** Low ground on the left, a level-4 plateau with no way up on the right. */
   const gap = (mutate?: (p: Project) => void): Sim =>
     stageSim(20, 12, { col: 5, row: 6 }, (m, s) => {
       m.fill({ col: 9, row: 0, w: 11, h: 12 }, T.stone, 4);

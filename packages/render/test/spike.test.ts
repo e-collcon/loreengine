@@ -13,7 +13,7 @@ import type { TerrainPick } from '../src/picking.ts';
 import { DEFAULT_CAMERA_PITCH, HEIGHT_RATIO, ISO_RATIO, clampZoom, createCamera, followCamera, projectX, projectY, screenX, screenY, setCameraPitch, setProjectionRatios, visibleRows, worldXAt, worldYAt } from '../src/projection.ts';
 import type { Camera } from '../src/projection.ts';
 import { colorOf, footprintRadius, shade, spriteMetrics } from '../src/sprites.ts';
-import { CAMERA_FACING, TOP_INDICES, buildStrip, maxSurface } from '../src/terrain.ts';
+import { CAMERA_FACING, buildStrip, maxSurface } from '../src/terrain.ts';
 
 const A = ELEVATION.terraces;
 const PPU = 64;
@@ -114,45 +114,96 @@ describe('[P3B.terrain.frames] terrain strips', () => {
   const project = rt.view.project;
   const strip = (row: number) => buildStrip(rt.view.world, project, row);
 
-  it('builds one seven-vertex top per cell, carrying the terrain\'s top FrameRef', () => {
+  it('builds one top per cell, carrying the terrain\'s top FrameRef, whose triangles tile the hex exactly', () => {
     const s = strip(0);
     expect(s.tops).toHaveLength(A.width);
     const top = s.tops[3]!;
     expect(top.cell).toBe(3);
-    expect(top.vertices).toHaveLength(14);
-    expect(top.heights).toHaveLength(7);
-    expect(TOP_INDICES).toHaveLength(18);
     const grass = project.terrains[0]!;
     expect(top.frame).toEqual({ atlasId: grass.top.atlasId, frame: 'terrain/grass' });
     expect(strip(A.plateau.row).tops[A.plateau.col]!.frame.frame).toBe('terrain/stone');
     expect(strip(A.pond.row).tops[A.pond.col]!.frame.frame).toBe('terrain/water');
+    // On every row: flat plus rise triangles cover the hex, no gaps, no overlaps (areas on the ground plane).
+    const hexArea = (3 * Math.sqrt(3)) / 2; // hexSize 1
+    for (let row = 0; row < A.height; row++) {
+      for (const t of strip(row).tops) {
+        const n = t.heights.length;
+        expect(t.vertices).toHaveLength(n * 2);
+        expect(t.local).toHaveLength(n * 2);
+        let area = 0;
+        for (const list of [t.flat, t.rise]) {
+          expect(list.length % 3).toBe(0);
+          for (let k = 0; k < list.length; k += 3) {
+            const [a, b, c] = [list[k]!, list[k + 1]!, list[k + 2]!];
+            for (const v of [a, b, c]) expect(v).toBeLessThan(n);
+            const ax = t.local[a * 2]!, ay = t.local[a * 2 + 1]!;
+            area += Math.abs((t.local[b * 2]! - ax) * (t.local[c * 2 + 1]! - ay) - (t.local[c * 2]! - ax) * (t.local[b * 2 + 1]! - ay)) / 2;
+          }
+        }
+        expect(area).toBeCloseTo(hexArea, 4);
+        // The outline is the six hex corners.
+        t.outline.forEach((v, i) => {
+          const a = ((60 * i - 30) * Math.PI) / 180;
+          expect(t.local[v * 2]).toBeCloseTo(Math.cos(a), 5);
+          expect(t.local[v * 2 + 1]).toBeCloseTo(Math.sin(a), 5);
+        });
+      }
+    }
   });
 
-  it('lifts every vertex by the surface height there: flat tops are level, ramp tops are tilted', () => {
-    const flat = strip(A.plateau.row).tops[A.plateau.col]!;
-    expect(Array.from(flat.heights)).toEqual([1, 1, 1, 1, 1, 1, 1]);
-    const c = cellCenter(A.plateau.col, A.plateau.row);
-    expect(flat.vertices[0]).toBeCloseTo(c.x * PPU, 3);
-    expect(flat.vertices[1]).toBeCloseTo((c.y * ISO_RATIO - 1 * HEIGHT_RATIO) * PPU, 3);
-    // The lower stacked ramp rises east from level 0 to level 1 (0 .. 0.5 world units).
-    const ramp = strip(A.rampLow.row).tops[A.rampLow.col]!;
-    const h = Array.from(ramp.heights).map((v) => Math.round(v * 1000) / 1000);
-    // center, then corners 0..5: upper-right, lower-right, bottom, lower-left, upper-left, top
-    expect(h).toEqual([0.25, 0.5, 0.5, 0.25, 0, 0, 0.25]);
+  it('every vertex sits on the runtime\'s surface; level ground is flat and slopes are rises (D194)', () => {
+    for (const row of [A.plateau.row, A.step.row + 1, A.terrace.row + 2, A.height - 1]) {
+      for (const t of strip(row).tops) {
+        const c = cellCenter(t.cell % A.width, row);
+        for (let v = 0; v < t.heights.length; v++) {
+          const x = c.x + t.local[v * 2]!;
+          const y = c.y + t.local[v * 2 + 1]!;
+          const z = rt.view.world.heightIn(t.cell, x, y);
+          // A vertex on a step inside a corner (D194) carries one side's height: it matches the surface a hair away.
+          const near = [[0, 0], [2e-6, 0], [-2e-6, 0], [0, 2e-6], [0, -2e-6], [2e-6, 2e-6], [-2e-6, -2e-6]].some(
+            ([ox, oy]) => Math.abs(rt.view.world.heightIn(t.cell, x + ox!, y + oy!) - t.heights[v]!) < 1e-6,
+          );
+          expect(near, `vertex ${v} of cell ${t.cell}`).toBe(true);
+          expect(t.vertices[v * 2]).toBeCloseTo(x * PPU, 3);
+          expect(t.vertices[v * 2 + 1]).toBeCloseTo((y * ISO_RATIO - t.heights[v]! * HEIGHT_RATIO) * PPU, 3);
+          void z;
+        }
+      }
+    }
+    // A plateau cell in the middle: all at height 1, nothing rises.
+    const mid = strip(A.plateau.row + 2).tops[A.plateau.col + 2]!;
+    expect(new Set(Array.from(mid.heights))).toEqual(new Set([1]));
+    expect(mid.rise).toHaveLength(0);
+    // A step cell: its inner hex is flat at level 1 (0.5), and it rises toward the plateau and falls toward the ground.
+    const step = strip(A.step.row + 1).tops[A.step.col]!;
+    expect(step.heights[0]).toBe(0.5); // the center
+    expect(step.rise.length).toBeGreaterThan(0);
+    // At the middle of its borders: halfway up to the plateau (east), halfway down to the ground (west).
+    const sc = cellCenter(A.step.col, A.step.row + 1);
+    const apothem = Math.sqrt(3) / 2;
+    expect(rt.view.world.heightIn(step.cell, sc.x + apothem, sc.y)).toBeCloseTo(0.75, 9);
+    expect(rt.view.world.heightIn(step.cell, sc.x - apothem, sc.y)).toBeCloseTo(0.25, 9);
+    expect(Math.max(...step.heights)).toBeLessThanOrEqual(1);
+    expect(Math.min(...step.heights)).toBeGreaterThanOrEqual(0);
   });
 
-  it('draws cliff faces only on camera-facing edges, between the cell\'s edge and its neighbor\'s', () => {
+  it('draws cliff faces only on camera-facing edges, the full border, between the cell\'s surface and its neighbor\'s', () => {
     expect([...CAMERA_FACING]).toEqual([5, 6]);
     // The plateau's southern row: every cell has faces dropping from 1.0 to the ground.
     const south = strip(A.plateau.row + A.plateau.h - 1);
     const faces = south.faces.filter((f) => f.cell === cellOf(A.plateauEdge));
-    expect(faces.map((f) => f.dir).sort()).toEqual([5, 6]);
-    for (const f of faces) {
-      expect([f.topA, f.topB, f.bottomA, f.bottomB]).toEqual([1, 1, 0, 0]);
-      expect(f.frame).toEqual(project.terrains[2]!.cliff);
-      expect(f.vertices).toHaveLength(8);
-      // Bottom vertices sit one world unit (64 px at zoom 1, by cos(pitch)) below the top ones.
-      expect(f.vertices[7]! - f.vertices[1]!).toBeCloseTo(64 * HEIGHT_RATIO, 3);
+    expect(new Set(faces.map((f) => f.dir))).toEqual(new Set([5, 6]));
+    for (const dir of [5, 6]) {
+      let length = 0;
+      for (const f of faces.filter((x) => x.dir === dir)) {
+        expect([f.topA, f.topB, f.bottomA, f.bottomB]).toEqual([1, 1, 0, 0]);
+        expect(f.frame).toEqual(project.terrains[2]!.cliff);
+        expect(f.vertices).toHaveLength(8);
+        // Bottom vertices sit one world unit (64 px at zoom 1, by cos(pitch)) below the top ones.
+        expect(f.vertices[7]! - f.vertices[1]!).toBeCloseTo(64 * HEIGHT_RATIO, 3);
+        length += Math.hypot(f.vertices[2]! - f.vertices[0]!, (f.vertices[3]! - f.vertices[1]!) / ISO_RATIO) / PPU;
+      }
+      expect(length).toBeCloseTo(1, 4); // the whole border, one hex size long
     }
     // Interior plateau rows have no faces (their neighbors are at the same height) ...
     expect(strip(A.plateau.row + 1).faces.filter((f) => f.cell === cellOf({ col: 8, row: A.plateau.row + 1 }))).toEqual([]);
@@ -161,10 +212,12 @@ describe('[P3B.terrain.frames] terrain strips', () => {
     expect(strip(A.height - 1).faces).toEqual([]);
   });
 
-  it('a face is as tall as the step: plateau to terrace is one level, terrace to ground one level', () => {
-    const row = A.terrace.row + A.terrace.h - 1; // the terrace's southern row
-    const face = buildStrip(rt.view.world, project, row).faces.find((f) => f.cell === row * A.width + A.terrace.col + 1)!;
-    expect([face.topA, face.bottomA]).toEqual([0.5, 0]);
+  it('a step of one level has no face (it is a slope); two levels or more have one', () => {
+    const terraceSouth = A.terrace.row + A.terrace.h - 1; // the level-1 terrace above level-0 ground
+    expect(buildStrip(rt.view.world, project, terraceSouth).faces.filter((f) => f.cell === terraceSouth * A.width + A.terrace.col + 1)).toEqual([]);
+    const spire = buildStrip(rt.view.world, project, A.spire.row).faces.filter((f) => f.cell === cellOf(A.spire));
+    expect(spire.length).toBeGreaterThan(0);
+    expect(Math.max(...spire.map((f) => f.topA - f.bottomA))).toBeCloseTo(1.5, 6); // level 3 above level 0
   });
 
   it('the neutral engine face is used when a terrain has no cliff art', () => {
@@ -239,13 +292,13 @@ describe('[P3B.depth.order] ★ depth order, on the draw list', () => {
     expect(list.footY[entityOf(rt, 'plateau-edge')]).toBeCloseTo(screenY(cam, PPU, c.y, 0) - 64 * HEIGHT_RATIO * cam.zoom, 6);
   });
 
-  it('a unit on a ramp is drawn after the ramp\'s strip, at the ramp\'s height', () => {
-    const i = entityOf(rt, 'on-ramp');
+  it('a unit on the step is drawn after the step\'s strip, at the step\'s height', () => {
+    const i = entityOf(rt, 'on-step');
     const unit = list.indexOfEntity(i);
-    expect(unit).toBeGreaterThan(list.indexOfStrip(A.onRamp.row));
-    expect(unit).toBeLessThan(list.indexOfStrip(A.onRamp.row + 1));
-    const c = cellCenter(A.onRamp.col, A.onRamp.row);
-    expect(list.footY[i]).toBeCloseTo(screenY(cam, PPU, c.y, 0.75), 6);
+    expect(unit).toBeGreaterThan(list.indexOfStrip(A.onStep.row));
+    expect(unit).toBeLessThan(list.indexOfStrip(A.onStep.row + 1));
+    const c = cellCenter(A.onStep.col, A.onStep.row);
+    expect(list.footY[i]).toBeCloseTo(screenY(cam, PPU, c.y, 0.5), 6);
   });
 
   it('within a strip, entities are ordered by foot screen position, then by index', () => {
@@ -387,10 +440,10 @@ describe('[P3B.picking.height-aware] ★ height-aware picking', () => {
       expect(hit.cell).toBe(cellOf(A.plateauEdge));
       expect(world.level(hit.cell)).toBe(2);
     }
-    // The terrace's south face belongs to the terrace.
-    const t = cellCenter(A.terrace.col + 1, A.terrace.row + A.terrace.h - 1);
-    const [fx, fy] = at(cam, t.x - 0.4, t.y + 0.77, 0.25);
-    expect(world.level(pick(fx, fy)!.cell)).toBe(1);
+    // The spire's south face belongs to the spire (a one-level step has no face any more: D194).
+    const t = cellCenter(A.spire.col, A.spire.row);
+    const [fx, fy] = at(cam, t.x - 0.4, t.y + 0.77, 0.75);
+    expect(pick(fx, fy)!.cell).toBe(cellOf(A.spire));
   });
 
   it('points over low ground return low ground', () => {
@@ -416,12 +469,14 @@ describe('[P3B.picking.height-aware] ★ height-aware picking', () => {
     expect(hit.z).toBeCloseTo(1, 6);
   });
 
-  it('points on a ramp return the ramp, at the surface height under the cursor', () => {
-    for (const [dx, want] of [[-0.6, 0.75 - 0.6 * (0.5 / Math.sqrt(3))], [0, 0.75], [0.6, 0.75 + 0.6 * (0.5 / Math.sqrt(3))]] as const) {
-      const [sx, sy] = onTop(A.onRamp, dx, 0);
+  it('points on a slope return the cell under the cursor, at the terraced height there', () => {
+    // Across the step, west (down to the ground) to east (up to the plateau).
+    for (const dx of [-0.8, -0.7, -0.6, 0, 0.6, 0.7, 0.8]) {
+      const c = cellCenter(A.onStep.col, A.onStep.row);
+      const [sx, sy] = onTop(A.onStep, dx, 0);
       const hit = pick(sx, sy)!;
-      expect(hit.cell).toBe(cellOf(A.onRamp));
-      expect(hit.z).toBeCloseTo(want, 3);
+      expect(hit.cell).toBe(world.cellAt(c.x + dx, c.y));
+      expect(hit.z).toBeCloseTo(world.surfaceHeight(c.x + dx, c.y), 3);
     }
   });
 

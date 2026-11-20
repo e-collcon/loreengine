@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildEmberfall, V060_PROJECT } from '@loreengine/fixtures';
 import {
   SCHEMA_V1_MESSAGE,
+  SCHEMA_VERSION,
   base64ToBytes,
   base64ToI16,
   base64ToU16,
@@ -15,6 +16,8 @@ import {
   u16ToBase64,
 } from '../src/index.ts';
 import type { Action, Condition, Id, Project } from '../src/index.ts';
+
+const EMBERFALL_CELLS = buildEmberfall().maps[0]!.width * buildEmberfall().maps[0]!.height;
 
 /** A fresh, mutable Emberfall as the JSON object a file would hold. */
 const file = (): any => JSON.parse(serializeProject(buildEmberfall()));
@@ -45,12 +48,29 @@ describe('[P1.validate.version] version gate', () => {
     expect(r.issues[0]!.message).toContain('v0.6.0');
   });
 
-  it('rejects schema 1 even when the rest of the file is a valid schema 2 project', () => {
+  it('rejects schema 1 even when the rest of the file is a valid current project', () => {
     expect(codes({ ...file(), schemaVersion: 1 })).toEqual(['schema-v1']);
   });
 
+  it('[P1.validate.migrate-2] a schema 2 file loads: its ramp layer is dropped and the levels kept (D194)', () => {
+    const current = file() as { maps: { layers: Record<string, string> }[] };
+    const cells = EMBERFALL_CELLS;
+    const ramp = new Uint8Array(cells);
+    ramp[3] = 1;
+    const v2 = { ...current, schemaVersion: 2, maps: current.maps.map((m) => ({ ...m, layers: { ...m.layers, ramp: bytesToBase64(ramp) } })) };
+    const r = parseProject(v2);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.schemaVersion).toBe(SCHEMA_VERSION);
+    expect('ramp' in r.project.maps[0]!.layers).toBe(false);
+    expect(Array.from(r.project.maps[0]!.layers.level)).toEqual(Array.from(buildEmberfall().maps[0]!.layers.level));
+    // A current file may not carry the old layer: the schema is strict.
+    const stale = { ...current, maps: current.maps.map((m) => ({ ...m, layers: { ...m.layers, ramp: bytesToBase64(ramp) } })) };
+    expect(parseProject(stale).ok).toBe(false);
+  });
+
   it('rejects a newer major and a newer minor as "made with a newer LoreEngine"', () => {
-    for (const raw of [{ ...file(), schemaVersion: 3 }, { ...file(), schemaMinor: 1 }]) {
+    for (const raw of [{ ...file(), schemaVersion: SCHEMA_VERSION + 1 }, { ...file(), schemaMinor: 1 }]) {
       const r = parseProject(raw);
       expect(r.ok).toBe(false);
       if (r.ok) continue;
@@ -139,13 +159,12 @@ describe('[P1.validate.ranges] ranges', () => {
   });
 
   it('rejects layers whose length is not width x height', () => {
-    expect(semantic((p) => void (p.maps[0]!.layers.ramp = new Uint8Array(3)))).toEqual(['layer-length @ maps[0].layers.ramp']);
+    expect(semantic((p) => void (p.maps[0]!.layers.level = new Uint8Array(3)))).toEqual(['layer-length @ maps[0].layers.level']);
     expect(semantic((p) => void (p.maps[0]!.layers.terrain = new Uint16Array(3)))).toEqual(['layer-length @ maps[0].layers.terrain']);
   });
 
-  it('rejects palette indices and ramp directions out of range', () => {
+  it('rejects palette indices out of range', () => {
     expect(semantic((p) => void (p.maps[0]!.layers.terrain[9] = 6))).toEqual(['out-of-range @ maps[0].layers.terrain']);
-    expect(semantic((p) => void (p.maps[0]!.layers.ramp[9] = 7))).toEqual(['out-of-range @ maps[0].layers.ramp']);
   });
 
   it('rejects maxStacks outside stackMode "stack" and inverted [min, max] pairs', () => {

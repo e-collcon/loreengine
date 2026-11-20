@@ -27,7 +27,7 @@ import { REGION_COLORS } from './draw.ts';
 import type { EditorSession } from './session.ts';
 
 const OVERLAY_LABELS: Record<Overlay, string> = { levels: 'Levels', blocked: 'Blocked edges', lint: 'Lint', regions: 'Regions', sight: 'Sight' };
-const TOOL_KEYS: Record<string, Tool> = { KeyB: 'terrain', KeyR: 'raise', KeyL: 'lower', KeyF: 'flatten', KeyM: 'ramp', KeyG: 'region', KeyP: 'place', KeyV: 'select' };
+const TOOL_KEYS: Record<string, Tool> = { KeyB: 'terrain', KeyR: 'raise', KeyL: 'lower', KeyF: 'flatten', KeyG: 'region', KeyP: 'place', KeyV: 'select' };
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 function useSession(session: EditorSession): number {
@@ -202,7 +202,7 @@ export function App({ session }: { session: EditorSession }) {
       )}
 
       <footer className="statusbar">
-        <span>{hover >= 0 ? `cell (${hover % map.width}, ${Math.floor(hover / map.width)})  level ${map.layers.level[hover]}${map.layers.ramp[hover] ? `  ramp ↗${map.layers.ramp[hover]}` : ''}  ${project.terrains.find((t) => t.id === map.terrainPalette[map.layers.terrain[hover]!])?.name ?? ''}` : 'Pan: right-drag, Space+drag or arrows · Zoom: wheel'}</span>
+        <span>{hover >= 0 ? `cell (${hover % map.width}, ${Math.floor(hover / map.width)})  level ${map.layers.level[hover]}  ${project.terrains.find((t) => t.id === map.terrainPalette[map.layers.terrain[hover]!])?.name ?? ''}` : 'Pan: right-drag, Space+drag or arrows · Zoom: wheel'}</span>
         <span>{doc.stack.size} edit(s) to undo</span>
         <span>revision {project.contentRevision}</span>
         <span>{session.storageStatus}</span>
@@ -302,10 +302,9 @@ function ToolOptions({ session }: { session: EditorSession }) {
     );
   }
   const hints: Partial<Record<Tool, string>> = {
-    raise: 'Each stroke raises a cell one level, up to the project’s maximum.',
+    raise: 'Each stroke raises a cell one level, up to the project’s maximum. One level apart is a walkable slope; two or more is a cliff.',
     lower: 'Each stroke lowers a cell one level.',
-    flatten: 'Sets the brushed area to the level under the first click and removes ramps.',
-    ramp: 'Click a hex and drag toward where it should rise. Release to keep it.',
+    flatten: 'Sets the brushed area to the level under the first click.',
     select: 'Click a placement or the player start to inspect it; drag to move. Delete removes, Ctrl+D duplicates.',
   };
   return (

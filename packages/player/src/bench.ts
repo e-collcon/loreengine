@@ -42,7 +42,7 @@ const blobs = emberfallBlobs();
 const resolveAsset = async (ref: { blobId: string }): Promise<Uint8Array | null> => blobs.get(ref.blobId)?.bytes ?? null;
 let client: Client | null = null;
 
-/** Emberfall's content on one `size` x `size` map: plateaus, ramps and ponds repeated across it. */
+/** Emberfall's content on one `size` x `size` map: plateaus, slopes and ponds repeated across it. */
 function benchProject(size: number): Project {
   const project = buildEmberfall();
   const source = project.maps[0]!;

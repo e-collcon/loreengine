@@ -13,13 +13,13 @@ import { AddPlacement, RemovePlacement, SetPlayerStart, UpdatePlacement } from '
 import { blockedEdges, visibleCells as sightCells, warningRows } from '../core/overlays.ts';
 import type { WarningRow } from '../core/overlays.ts';
 import { MapPreview, PLAYER_START_KEY } from '../core/preview.ts';
-import { LayerStroke, RegionStroke, nearestHexDir, regionCellSet } from '../core/strokes.ts';
+import { LayerStroke, RegionStroke, regionCellSet } from '../core/strokes.ts';
 import { REGION_COLORS, drawEditorOverlays, drawSelection, visibleCells } from './draw.ts';
 import type { Projector } from './draw.ts';
 import type { EditorSession } from './session.ts';
 
 type Drag =
-  | { kind: 'layer'; stroke: LayerStroke; level: number; rampCell: number }
+  | { kind: 'layer'; stroke: LayerStroke; level: number }
   | { kind: 'region'; stroke: RegionStroke }
   | { kind: 'place'; placement: EntityPlacement }
   | { kind: 'move'; key: string; before: EntityPlacement | null; startBefore: { x: number; y: number; facing: number } | null; dx: number; dy: number; moved: boolean }
@@ -176,7 +176,7 @@ export class CanvasController {
     const s = this.session.state;
     const map = this.preview.map;
     if (cell < 0) return [];
-    if (s.tool === 'ramp' || s.tool === 'place' || s.tool === 'select') return s.tool === 'select' ? [] : [cell];
+    if (s.tool === 'place' || s.tool === 'select') return s.tool === 'select' ? [] : [cell];
     return brushCells(cell, s.brushSize, map.width, map.height);
   }
 
@@ -218,8 +218,6 @@ export class CanvasController {
       sight,
       brush: this.brushUnder(this.hoverCell),
       brushColor: s.tool === 'region' && s.eraseRegion ? '#ff6b5e' : '#fff27a',
-      // No arrow until the drag has chosen a direction (a ramp of 0 is no ramp).
-      rampPreview: drag?.kind === 'layer' && drag.rampCell >= 0 && map.layers.ramp[drag.rampCell]! > 0 ? { cell: drag.rampCell, dir: map.layers.ramp[drag.rampCell]! } : null,
     });
     if (selected >= 0) {
       const e = this.preview.entities;
@@ -264,13 +262,10 @@ export class CanvasController {
       case 'flatten': {
         if (s.tool === 'terrain' && s.terrainId === null) return;
         const label = { terrain: 'Paint terrain', raise: 'Raise', lower: 'Lower', flatten: 'Flatten' }[s.tool];
-        this.drag = { kind: 'layer', stroke: new LayerStroke(project, label, map.id), level: map.layers.level[cell]!, rampCell: -1 };
+        this.drag = { kind: 'layer', stroke: new LayerStroke(project, label, map.id), level: map.layers.level[cell]! };
         this.paint(cell);
         break;
       }
-      case 'ramp':
-        this.drag = { kind: 'layer', stroke: new LayerStroke(project, 'Ramp', map.id), level: 0, rampCell: cell };
-        break;
       case 'region': {
         if (s.regionId === null) return;
         const stroke = new RegionStroke(project, map.id, s.regionId);
@@ -341,18 +336,8 @@ export class CanvasController {
       const map = this.preview.map;
       switch (drag.kind) {
         case 'layer':
-          if (drag.rampCell >= 0) {
-            const c = drag.rampCell;
-            const dx = this.pick.x - this.world.centerX(c);
-            const dy = this.pick.y - this.world.centerY(c);
-            if (Math.hypot(dx, dy) > 0.3 * this.session.project.settings.hexSize) {
-              drag.stroke.setRamp(c, nearestHexDir(this.world.centerX(c), this.world.centerY(c), this.pick.x, this.pick.y));
-              this.changedLive();
-            }
-          } else {
-            this.paint(cell);
-            this.changedLive();
-          }
+          this.paint(cell);
+          this.changedLive();
           break;
         case 'region':
           drag.stroke.paint(brushCells(cell, this.session.state.brushSize, map.width, map.height), this.session.state.eraseRegion);

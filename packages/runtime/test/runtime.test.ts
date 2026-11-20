@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildEmberfall } from '@loreengine/fixtures';
-import { parseSave, serializeProject, serializeSave } from '@loreengine/schema';
+import { SCHEMA_VERSION, parseSave, serializeProject, serializeSave } from '@loreengine/schema';
 import type { SaveState } from '@loreengine/schema';
 import { createRuntime, emptyInput } from '../src/index.ts';
 import type { Runtime } from '../src/index.ts';
@@ -75,7 +75,7 @@ describe('[P2.save.header] the save boundary', () => {
     tick(rt, 12);
     const save = rt.snapshot({ savedAt: '2026-11-17T01:00:00.000Z', kind: 'manual' });
     expect(save.header).toEqual({
-      schemaVersion: 2,
+      schemaVersion: SCHEMA_VERSION,
       projectId: project.id,
       contentRevision: project.contentRevision,
       savedAt: '2026-11-17T01:00:00.000Z',
@@ -233,9 +233,15 @@ describe('[P2.save.restore] resuming from a save', () => {
   it('rejects a schema 1 save and a save with unknown fields', () => {
     expect(parseSave({ schemaVersion: 1, player: {} })).toMatchObject({ ok: false, issues: [{ code: 'schema-v1' }] });
     expect(parseSave({ header: { schemaVersion: 1 } })).toMatchObject({ ok: false, issues: [{ code: 'schema-v1' }] });
-    expect(parseSave({ header: { schemaVersion: 3 } })).toMatchObject({ ok: false, issues: [{ code: 'newer-version' }] });
+    expect(parseSave({ header: { schemaVersion: SCHEMA_VERSION + 1 } })).toMatchObject({ ok: false, issues: [{ code: 'newer-version' }] });
     expect(parseSave(null)).toMatchObject({ ok: false, issues: [{ code: 'not-a-save' }] });
     const save = createRuntime(bareProject(), null, OPTS).snapshot() as SaveState & { player?: unknown };
+    // A schema 2 save has the same shape and still loads (D194).
+    const v2 = JSON.parse(serializeSave(save));
+    v2.header.schemaVersion = 2;
+    const loaded = parseSave(v2);
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) expect(loaded.save.header.schemaVersion).toBe(SCHEMA_VERSION);
     save.player = { hp: 3 };
     expect(parseSave(save).ok).toBe(false);
   });

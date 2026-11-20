@@ -250,7 +250,7 @@ describe('[P4A.emberfall.sentry] Emberfall: the sentry on the plateau', () => {
     return createSim(p, null, OPTS);
   }
 
-  it('spots the player from the cliff edge first, then descends the ramp to chase', () => {
+  it('spots the player from the cliff edge first, then descends the step to chase', () => {
     const sim = below();
     const e = sim.entities;
     const sentry = e.indexOfPlacement(KEYS.sentry);
@@ -270,10 +270,13 @@ describe('[P4A.emberfall.sentry] Emberfall: the sentry on the plateau', () => {
       reached = Math.hypot(e.x[sentry]! - e.x[0]!, e.y[sentry]! - e.y[0]!) < 1.4;
     }
     expect(reached).toBe(true);
-    // The only way down is the pair of stacked ramps, top first.
-    expect(visited).toContain(cell(E.rampHigh));
-    expect(visited).toContain(cell(E.rampLow));
-    expect(visited.indexOf(cell(E.rampHigh))).toBeLessThan(visited.indexOf(cell(E.rampLow)));
+    // The only way down is the level-1 step: the first cell off the plateau is on it.
+    const levels = visited.map((c) => sim.world!.level[c]!);
+    const firstDown = levels.findIndex((l) => l < 2);
+    expect(firstDown).toBeGreaterThan(0);
+    expect(levels[firstDown]).toBe(1);
+    expect(E.step.col).toBe(visited[firstDown]! % E.width);
+    void cell;
     expect(e.z[sentry]).toBe(0);
     run(sim, 30);
     expect(sim.brains.stateOf(sentry)).toBe('fight'); // target-within 1.3
@@ -356,7 +359,7 @@ describe('click orders (spec 7.9b)', () => {
   });
 
   it('an unreachable click stops at the closest reachable point', () => {
-    const sim = stageSim(20, 12, { col: 3, row: 6 }, (m: MapPainter) => m.fill({ col: 10, row: 0, w: 10, h: 12 }, T.grass, 3)); // a plateau with no ramp
+    const sim = stageSim(20, 12, { col: 3, row: 6 }, (m: MapPainter) => m.fill({ col: 10, row: 0, w: 10, h: 12 }, T.grass, 3)); // a plateau three levels up: cliffs all round
     const e = sim.entities;
     const goal = cellCenter(14, 6);
     click(sim, groundOrder(goal.x, goal.y));
@@ -369,12 +372,12 @@ describe('click orders (spec 7.9b)', () => {
     expect([e.x[0], e.y[0]]).toEqual([x, y]); // it stays there
   });
 
-  it('a click on a hostile with health is an attack order: clicking an enemy on a plateau routes up the ramp and into range', () => {
+  it('a click on a hostile with health is an attack order: clicking an enemy on a plateau routes up the step and into range', () => {
     const p = buildEmberfall();
     const E = EMBERFALL;
-    // The sentry stands still on the plateau; the player starts on low ground west of the ramps.
+    // The sentry stands still on the plateau; the player starts on low ground west of the step.
     p.maps[0]!.placements[1]!.overrides = { brain: undefined, acquisition: undefined };
-    const spot = cellCenter(E.rampLow.col - 4, E.rampLow.row);
+    const spot = cellCenter(E.step.col - 5, E.step.row);
     p.maps[0]!.playerStart = { x: spot.x, y: spot.y, facing: 0 };
     const sim = createSim(p, null, OPTS);
     const e = sim.entities;
@@ -386,8 +389,9 @@ describe('click orders (spec 7.9b)', () => {
       run(sim, 1);
       visited.add(cellOfEntity(sim, 0));
     }
-    expect(visited.has(E.rampLow.row * E.width + E.rampLow.col)).toBe(true);
-    expect(visited.has(E.rampHigh.row * E.width + E.rampHigh.col)).toBe(true);
+    let onStep = false;
+    for (let r = E.step.row; r < E.step.row + E.step.h; r++) if (visited.has(r * E.width + E.step.col)) onStep = true;
+    expect(onStep).toBe(true);
     expect(e.z[0]).toBe(1);
     // It closed to attack-primary's range (slash: reach 1.6, plus the target's radius), faced the target,
     // and (since chunk 6) swung once: the sentry lost health and was knocked back a little.

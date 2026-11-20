@@ -27,7 +27,7 @@ describe('[P1.roundtrip.emberfall] Emberfall round trip', () => {
     const map = r.project.maps[0]!;
     expect(map.layers.terrain).toBeInstanceOf(Uint16Array);
     expect(map.layers.level).toBeInstanceOf(Uint8Array);
-    expect(map.layers.ramp).toBeInstanceOf(Uint8Array);
+    expect('ramp' in map.layers).toBe(false); // schema 3 (D194)
     expect(map.regions[0]!.cells).toBeInstanceOf(Int16Array);
     expect(map.layers.terrain.length).toBe(EMBERFALL.width * EMBERFALL.height);
     expect(Array.from(map.layers.level)).toEqual(Array.from(buildEmberfall().maps[0]!.layers.level));
@@ -50,17 +50,21 @@ describe('[P1.fixtures.content] Emberfall content (spec 8.9)', () => {
   const map = p.maps[0]!;
   const at = (c: { col: number; row: number }) => c.row * map.width + c.col;
 
-  it('has a village on level 0, a plateau on level 2 and two stacked ramps between', () => {
+  it('has a village on level 0, a plateau on level 2 and a level-1 step between', () => {
+    const { step, plateau } = EMBERFALL;
     expect(map.layers.level[at(EMBERFALL.playerStart)]).toBe(0);
-    expect(map.layers.level[at({ col: EMBERFALL.plateau.col, row: EMBERFALL.plateau.row })]).toBe(2);
-    expect([map.layers.level[at(EMBERFALL.rampLow)], map.layers.ramp[at(EMBERFALL.rampLow)]]).toEqual([0, 1]);
-    expect([map.layers.level[at(EMBERFALL.rampHigh)], map.layers.ramp[at(EMBERFALL.rampHigh)]]).toEqual([1, 1]);
-    expect(EMBERFALL.rampHigh.col + 1).toBe(EMBERFALL.plateau.col);
+    expect(map.layers.level[at({ col: plateau.col, row: plateau.row })]).toBe(2);
+    for (let r = step.row; r < step.row + step.h; r++) {
+      expect(map.layers.level[at({ col: step.col, row: r })]).toBe(1);
+      expect(map.layers.level[at({ col: step.col - 1, row: r })]).toBe(0);
+    }
+    expect(step.col + step.w).toBe(plateau.col);
   });
 
-  it('has one deliberately broken ramp, an elder, a sentry and a boss', () => {
-    expect(map.layers.ramp[at(EMBERFALL.brokenRamp)]).toBe(1);
-    expect(map.layers.level[at({ col: EMBERFALL.brokenRamp.col + 1, row: EMBERFALL.brokenRamp.row })]).toBe(0);
+  it('has one deliberately unreachable ledge, an elder, a sentry and a boss', () => {
+    const { ledge } = EMBERFALL;
+    expect(map.layers.level[at(ledge)]).toBe(2);
+    expect(map.layers.level[at({ col: ledge.col - 1, row: ledge.row })]).toBe(0); // two levels down: a cliff
     expect(map.placements.map((x) => p.archetypes.find((a) => a.id === x.archetypeId)!.name)).toEqual(['Elder', 'Sentry', 'Ember Warden']);
   });
 

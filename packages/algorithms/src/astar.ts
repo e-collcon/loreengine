@@ -10,7 +10,7 @@
  *   2. Cells are dense indices (row * width + col) instead of `GridPos`
  *      objects: the adapter edge.
  *   3. `terrain.isWalkable(neighbor)` became `grid.connects(current, neighbor)`
- *      so cliffs and ramps decide passage (spec 6.3, 7.5). `grid.passable`
+ *      so slopes and cliffs decide passage (spec 6.3, 7.5). `grid.passable`
  *      keeps the v0.6.0 early-out on an unwalkable goal.
  *   4. `maxExplored` defaults to the spec's 4,096 expansion cap (9.2).
  *   5. The result reports why it stopped and, when the goal was not reached,

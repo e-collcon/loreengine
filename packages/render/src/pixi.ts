@@ -24,7 +24,7 @@ import { ISO_RATIO, clampZoom, createCamera, projectX, projectY } from './projec
 import type { Camera } from './projection.ts';
 import { silhouettes } from './silhouette.ts';
 import { colorOf, shade, spriteMetrics } from './sprites.ts';
-import { TOP_INDICES, buildStrip, maxSurface } from './terrain.ts';
+import { buildStrip, maxSurface } from './terrain.ts';
 import type { StripGeometry } from './terrain.ts';
 
 /**
@@ -58,10 +58,8 @@ interface EntitySprite {
 }
 
 /** UV of a hex top's seven vertices inside its frame: the center, then corners 0..5. */
-const TOP_UV: readonly [number, number][] = [[0.5, 0.5], ...Array.from({ length: 6 }, (_, i): [number, number] => {
-  const a = ((60 * i - 30) * Math.PI) / 180;
-  return [0.5 + Math.cos(a) / Math.sqrt(3), 0.5 + Math.sin(a) / 2];
-})];
+/** Rises (terraced slopes, blended corners) are drawn a little darker, so terraces read as steps. */
+const RISE_TINT = 0xd6d2c8;
 
 /**
  * Destroy a display tree and what its nodes own: a Mesh's geometry (its GPU
@@ -319,7 +317,7 @@ export class PixiRenderer {
     const strip = buildStrip(world, this.view.project, Math.floor(cell / world.width));
     const top = strip.tops[cell % world.width]!;
     const points: number[] = [];
-    for (let i = 1; i < 7; i++) points.push(top.vertices[i * 2]!, top.vertices[i * 2 + 1]!);
+    for (const v of top.outline) points.push(top.vertices[v * 2]!, top.vertices[v * 2 + 1]!);
     g.poly(points).fill({ color: 0xffffff, alpha: 0.28 }).stroke({ color: 0xfff27a, width: 3, alpha: 0.95 });
   }
 
@@ -496,25 +494,47 @@ export class PixiRenderer {
     if (probe === null) return null;
     const page = this.pages.get(probe.frame.image.blobId)!;
     const inset = 0.6; // half a texel and a bit, so neighbors on the page do not bleed in
-    const positions = new Float32Array(strip.tops.length * 14);
-    const uvs = new Float32Array(strip.tops.length * 14);
-    const indices = new Uint32Array(strip.tops.length * 18);
-    for (let t = 0; t < strip.tops.length; t++) {
-      const top = strip.tops[t]!;
+    let vertexCount = 0;
+    let flatCount = 0;
+    let riseCount = 0;
+    for (const top of strip.tops) {
+      vertexCount += top.heights.length;
+      flatCount += top.flat.length;
+      riseCount += top.rise.length;
+    }
+    const positions = new Float32Array(vertexCount * 2);
+    const uvs = new Float32Array(vertexCount * 2);
+    const flat = new Uint32Array(flatCount);
+    const rise = new Uint32Array(riseCount);
+    let base = 0;
+    let fi = 0;
+    let ri = 0;
+    for (const top of strip.tops) {
       const found = this.frameTexture(top.frame.atlasId, top.frame.frame);
       if (found === null || found.frame.image.blobId !== probe.frame.image.blobId) return null;
       const f = found.frame;
       const pw = f.w / (f.u1 - f.u0);
       const ph = f.h / (f.v1 - f.v0);
-      positions.set(top.vertices, t * 14);
-      for (let v = 0; v < 7; v++) {
-        uvs[t * 14 + v * 2] = (f.x + inset + TOP_UV[v]![0] * (f.w - 2 * inset)) / pw;
-        uvs[t * 14 + v * 2 + 1] = (f.y + inset + TOP_UV[v]![1] * (f.h - 2 * inset)) / ph;
+      positions.set(top.vertices, base * 2);
+      const n = top.heights.length;
+      for (let v = 0; v < n; v++) {
+        // The top art covers the hex's bounding box: width sqrt(3) x size, height 2 x size.
+        const u = 0.5 + top.local[v * 2]! / Math.sqrt(3);
+        const w = 0.5 + top.local[v * 2 + 1]! / 2;
+        uvs[(base + v) * 2] = (f.x + inset + u * (f.w - 2 * inset)) / pw;
+        uvs[(base + v) * 2 + 1] = (f.y + inset + w * (f.h - 2 * inset)) / ph;
       }
-      for (let k = 0; k < 18; k++) indices[t * 18 + k] = TOP_INDICES[k]! + t * 7;
+      for (const k of top.flat) flat[fi++] = k + base;
+      for (const k of top.rise) rise[ri++] = k + base;
+      base += n;
     }
     const root = new Container();
-    root.addChild(new Mesh({ geometry: new MeshGeometry({ positions, uvs, indices }), texture: page }));
+    if (flat.length > 0) root.addChild(new Mesh({ geometry: new MeshGeometry({ positions, uvs, indices: flat }), texture: page }));
+    if (rise.length > 0) {
+      const mesh = new Mesh({ geometry: new MeshGeometry({ positions: positions.slice(), uvs: uvs.slice(), indices: rise }), texture: page });
+      mesh.tint = RISE_TINT;
+      root.addChild(mesh);
+    }
     for (const dir of [5, 6] as const) {
       const faces = strip.faces.filter((face) => face.dir === dir);
       if (faces.length === 0) continue;
@@ -561,15 +581,20 @@ export class PixiRenderer {
       return textured;
     }
     const g = new Graphics();
-    const points = new Array<number>(12);
     for (const top of strip.tops) {
-      for (let i = 0; i < 6; i++) {
-        points[i * 2] = top.vertices[(i + 1) * 2]!;
-        points[i * 2 + 1] = top.vertices[(i + 1) * 2 + 1]!;
-      }
-      // Placeholder art: the frame's color, a little lighter with each cliff level.
+      // Placeholder art: the frame's color, a little lighter with each level; rises a little darker.
       const color = shade(colorOf(top.frame.frame), 1 + top.level * 0.05);
-      g.poly(points.slice()).fill({ color }).stroke({ color: shade(color, 0.72), width: 1.5, alpha: 0.55 });
+      const tri = (list: Uint16Array, c: number) => {
+        for (let k = 0; k < list.length; k += 3) {
+          const p = [list[k]!, list[k + 1]!, list[k + 2]!].flatMap((v) => [top.vertices[v * 2]!, top.vertices[v * 2 + 1]!]);
+          g.poly(p).fill({ color: c });
+        }
+      };
+      tri(top.flat, color);
+      tri(top.rise, shade(color, 0.86));
+      const outline: number[] = [];
+      for (const v of top.outline) outline.push(top.vertices[v * 2]!, top.vertices[v * 2 + 1]!);
+      g.poly(outline).stroke({ color: shade(color, 0.72), width: 1.5, alpha: 0.55 });
     }
     for (const face of strip.faces) {
       const base = colorOf(face.frame ? face.frame.frame : 'cliff');

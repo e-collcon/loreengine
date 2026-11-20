@@ -2,18 +2,17 @@
  * Map lint (spec 6.4). Warnings, shown in the editor, never load failures:
  * an unfinished map is still a valid file.
  *
- *   ramp-leads-nowhere      a ramp whose high edge meets no cell at the next level up
  *   unreachable-area        walkable cells unreachable from the player's start
  *   placement-impassable    a placement on terrain it cannot stand on
  *   placement-on-cliff      a placement whose collider overlaps a cliff edge
  *   empty-region            a region with no cells
  */
-import { cornerOffsetX, cornerOffsetY, edgeCornerA, edgeCornerB, oppositeDir } from '@loreengine/hexmath';
+import { cornerOffsetX, cornerOffsetY, edgeCornerA, edgeCornerB } from '@loreengine/hexmath';
 import type { HexDir } from '@loreengine/hexmath';
 import type { MapDef, Project } from '@loreengine/schema';
-import { MODE_WALK, SLOPED, World, edgeLevel, modeBit } from './world.ts';
+import { MODE_WALK, World, modeBit } from './world.ts';
 
-export type LintCode = 'ramp-leads-nowhere' | 'unreachable-area' | 'placement-impassable' | 'placement-on-cliff' | 'empty-region';
+export type LintCode = 'unreachable-area' | 'placement-impassable' | 'placement-on-cliff' | 'empty-region';
 
 export interface LintWarning {
   code: LintCode;
@@ -34,23 +33,6 @@ export function lintMap(project: Project, def: MapDef): LintWarning[] {
   const out: LintWarning[] = [];
   const world = new World(project, def);
   const at = (cell: number): string => `(${cell % def.width}, ${Math.floor(cell / def.width)})`;
-
-  // Ramps whose high edge meets no cell at the next level up.
-  for (let cell = 0; cell < world.cells; cell++) {
-    const ramp = def.layers.ramp[cell]!;
-    if (ramp === 0) continue;
-    const high = def.layers.level[cell]! + 1;
-    const other = world.neighbor[cell * 6 + ramp - 1]!;
-    const meets = other >= 0 && edgeLevel(def.layers.level[other]!, def.layers.ramp[other]!, oppositeDir(ramp as HexDir)) === high;
-    if (!meets) {
-      out.push({
-        code: 'ramp-leads-nowhere',
-        mapId: def.id,
-        cell,
-        message: `The ramp at ${at(cell)} rises to level ${high}, but ${other < 0 ? 'the map ends there' : `the cell beyond it is not at level ${high}`}.`,
-      });
-    }
-  }
 
   // Walkable areas unreachable from the player's start.
   if (def.playerStart) {
@@ -161,4 +143,3 @@ export function distanceToSegment(px: number, py: number, ax: number, ay: number
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-export { SLOPED };

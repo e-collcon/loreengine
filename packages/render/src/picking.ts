@@ -30,7 +30,7 @@ export function pickTerrain(world: WorldView, settings: ProjectSettings, cam: Ca
   const ppu = settings.pixelsPerUnit;
   const x = worldXAt(cam, ppu, sx);
   const step = settings.levelHeight / STEPS_PER_LEVEL;
-  // One level above the top, so a ramp on a maxLevel cell is still entered from above.
+  // One level above the top, so the ray always starts in the open.
   const top = (settings.maxLevel + 1) * settings.levelHeight;
   let above = top; // the last height at which the ray was still in the open
   for (let h = top; h >= -1e-9; h -= step) {

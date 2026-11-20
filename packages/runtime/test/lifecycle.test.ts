@@ -15,7 +15,7 @@ const CELLAR = id('map', 'cellar');
 const K = {
   behindCliff: id('placement', 'behind-cliff'),
   plateauEdge: id('placement', 'plateau-edge'),
-  onRamp: id('placement', 'on-ramp'),
+  onStep: id('placement', 'on-step'),
   guard: id('placement', 'cellar-guard'),
 };
 const DUMMY = id('archetype', 'dummy');
@@ -82,7 +82,7 @@ describe('[P3A.lifecycle.placements] loading a map', () => {
     const want: [string, { col: number; row: number }, number][] = [
       [K.behindCliff, A.behindCliff, 0],
       [K.plateauEdge, A.plateauEdge, 1], //  level 2
-      [K.onRamp, A.onRamp, 0.75], //         halfway up the level 1 -> 2 ramp
+      [K.onStep, A.onStep, 0.5], //          on the level-1 step
     ];
     for (const [key, cell, z] of want) {
       const i = idx(sim, key);
@@ -92,7 +92,7 @@ describe('[P3A.lifecycle.placements] loading a map', () => {
       expect(e.z[i]).toBeCloseTo(z, 12);
       expect(e.hp[i]).toBe(50);
     }
-    expect([idx(sim, K.behindCliff), idx(sim, K.plateauEdge), idx(sim, K.onRamp)]).toEqual([1, 2, 3]); // authored order
+    expect([idx(sim, K.behindCliff), idx(sim, K.plateauEdge), idx(sim, K.onStep)]).toEqual([1, 2, 3]); // authored order
   });
 
   it('placement overrides replace whole components of the archetype', () => {
@@ -172,13 +172,13 @@ describe('[P3A.lifecycle.persistent] persistent entities travel', () => {
     expect([e.x[0], e.y[0], e.z[0]]).toEqual([c.x, c.y, 0]);
     expect([e.prevX[0], e.prevY[0]]).toEqual([c.x, c.y]); // no interpolation across a teleport
     expect(idx(sim, K.guard)).toBeGreaterThan(0);
-    expect(idx(sim, K.onRamp)).toBe(-1); // the terraces' entities are gone
+    expect(idx(sim, K.onStep)).toBe(-1); // the terraces' entities are gone
     expect(sim.world!.width).toBe(B.width);
   });
 
   it('only entities with the persistent component cross; everything else belongs to its map', () => {
     const sim = start();
-    sim.executor.run([{ type: 'teleport', target: { by: 'placement', key: K.onRamp }, mapId: CELLAR, x: 3, y: 3 }], { subject: NO_ENTITY, other: NO_ENTITY });
+    sim.executor.run([{ type: 'teleport', target: { by: 'placement', key: K.onStep }, mapId: CELLAR, x: 3, y: 3 }], { subject: NO_ENTITY, other: NO_ENTITY });
     run(sim, 1);
     expect(sim.map!.def.id).toBe(TERRACES);
     expect(sim.diagnostics.countOf('teleport-not-persistent')).toBe(1);
@@ -191,7 +191,7 @@ describe('[P3A.lifecycle.save-delta] what a map remembers', () => {
     const e = sim.entities;
     act(sim, { type: 'despawn', target: { by: 'placement', key: K.behindCliff } }); // gone
     e.hp[idx(sim, K.plateauEdge)] = 20; //                                              health lasts
-    e.x[idx(sim, K.onRamp)] = e.x[idx(sim, K.onRamp)]! + 0.3; //                        position does not
+    e.x[idx(sim, K.onStep)] = e.x[idx(sim, K.onStep)]! + 0.3; //                        position does not
     sim.executor.run([{ type: 'spawn', archetypeId: DUMMY, at: 'subject', count: 2 }], { subject: e.idAt(0), other: NO_ENTITY });
     run(sim, 1);
   }
@@ -205,7 +205,7 @@ describe('[P3A.lifecycle.save-delta] what a map remembers', () => {
     toCellar(sim);
     const delta = sim.mapDeltas.get(TERRACES)!;
     expect([...delta.removed]).toEqual([K.behindCliff]);
-    expect([...delta.changed.keys()]).toEqual([K.plateauEdge]); // on-ramp's full health and moved position are not kept
+    expect([...delta.changed.keys()]).toEqual([K.plateauEdge]); // on-step's full health and moved position are not kept
     expect(delta.changed.get(K.plateauEdge)).toEqual({ health: { current: 20, dead: false } });
     expect(delta.spawned).toHaveLength(2);
     expect(delta.spawned[0]!.archetypeId).toBe(DUMMY);
@@ -215,9 +215,9 @@ describe('[P3A.lifecycle.save-delta] what a map remembers', () => {
     const e = sim.entities;
     expect(idx(sim, K.behindCliff)).toBe(-1); // still gone
     expect(e.hp[idx(sim, K.plateauEdge)]).toBe(20);
-    const ramp = cellCenter(A.onRamp.col, A.onRamp.row);
-    expect(e.x[idx(sim, K.onRamp)]).toBe(ramp.x); // back at its placed position
-    expect(e.hp[idx(sim, K.onRamp)]).toBe(50);
+    const step = cellCenter(A.onStep.col, A.onStep.row);
+    expect(e.x[idx(sim, K.onStep)]).toBe(step.x); // back at its placed position
+    expect(e.hp[idx(sim, K.onStep)]).toBe(50);
     const survivors: number[] = [];
     for (let i = 0; i < e.highWater; i++) if (e.alive[i] === 1 && (e.flags[i]! & F_SPAWNED) !== 0) survivors.push(i);
     expect(survivors).toHaveLength(2);
@@ -261,10 +261,10 @@ describe('[P3A.lifecycle.save-delta] what a map remembers', () => {
 
   it('a placement removed on one visit is removed in the save\'s `removed` list of the current map too', () => {
     const rt = createRuntime(elevation(), null, OPTS);
-    rt.enqueue({ type: 'test-actions', actions: [{ type: 'despawn', target: { by: 'placement', key: K.onRamp } }] });
+    rt.enqueue({ type: 'test-actions', actions: [{ type: 'despawn', target: { by: 'placement', key: K.onStep } }] });
     rt.tick(emptyInput());
     const save = rt.snapshot();
-    expect(save.maps[TERRACES]!.removed).toEqual([K.onRamp]);
+    expect(save.maps[TERRACES]!.removed).toEqual([K.onStep]);
     expect(Object.keys(save.maps[TERRACES]!.changed).sort()).toEqual([K.behindCliff, K.plateauEdge].sort());
     const resumed = createRuntime(elevation(), save, OPTS);
     expect(resumed.view.entities.count).toBe(3);
@@ -342,14 +342,14 @@ describe('world actions', () => {
   it('[P3A.act.despawn] removes its targets at the end of the tick; their ids go stale', () => {
     const sim = start();
     const e = sim.entities;
-    const victim = e.idAt(idx(sim, K.onRamp));
+    const victim = e.idAt(idx(sim, K.onStep));
     sim.executor.run([{ type: 'despawn', target: { by: 'archetype', archetypeId: DUMMY as Id<'archetype'> } }], { subject: NO_ENTITY, other: NO_ENTITY });
     expect(e.count).toBe(4); // deferred: nothing changes under a system mid-tick
     expect(e.isAlive(victim)).toBe(true);
     run(sim, 1);
     expect(e.count).toBe(1);
     expect(e.isAlive(victim)).toBe(false);
-    expect([...sim.mapDeltas.get(TERRACES)!.removed].sort()).toEqual([K.behindCliff, K.onRamp, K.plateauEdge].sort());
+    expect([...sim.mapDeltas.get(TERRACES)!.removed].sort()).toEqual([K.behindCliff, K.onStep, K.plateauEdge].sort());
     // The freed slots are reused, with a bumped generation.
     sim.executor.run([{ type: 'spawn', archetypeId: DUMMY, at: 'subject', count: 1 }], { subject: e.idAt(0), other: NO_ENTITY });
     expect(e.idAt(1)).toBe(65536 + 1);

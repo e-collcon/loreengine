@@ -29,7 +29,7 @@ export {
   visibleRows,
 } from './projection.ts';
 export type { Camera } from './projection.ts';
-export { buildStrip, maxSurface, CAMERA_FACING, TOP_INDICES } from './terrain.ts';
+export { buildStrip, maxSurface, CAMERA_FACING } from './terrain.ts';
 export type { StripGeometry, TopMesh, FaceQuad } from './terrain.ts';
 export { spriteMetrics, footprintRadius, colorOf, shade } from './sprites.ts';
 export type { SpriteMetrics } from './sprites.ts';

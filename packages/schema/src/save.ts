@@ -153,7 +153,7 @@ export type ParseSaveResult = { ok: true; save: SaveState } | { ok: false; issue
 
 /** The message a schema 1 save is rejected with. */
 export const SAVE_V1_MESSAGE =
-  'This save was made with LoreBrix v0.6.0 (schema 1). LoreEngine reads schema 2 saves and does not migrate older ones.';
+  `This save was made with LoreBrix v0.6.0 (schema 1). LoreEngine reads schema ${SCHEMA_VERSION} saves and does not migrate v0.6.0 ones.`;
 
 /** Validate a JSON-decoded save. Rejects rather than repairs, like the project validator. */
 export function parseSave(raw: unknown): ParseSaveResult {
@@ -172,6 +172,8 @@ export function parseSave(raw: unknown): ParseSaveResult {
       issues: [{ path: 'header.schemaVersion', code: 'newer-version', message: `This save was made with a newer LoreEngine (schema ${version}; this build reads up to ${SCHEMA_VERSION}).` }],
     };
   }
+  // A schema 2 save has the same shape: only the projects changed (D194).
+  if (version === 2 && header) raw = { ...(raw as object), header: { ...header, schemaVersion: SCHEMA_VERSION } };
   const parsed = SaveStateSchema.safeParse(raw);
   if (!parsed.success) {
     return {

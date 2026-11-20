@@ -7,7 +7,7 @@ import type { Id } from '@loreengine/schema';
 import type { BrushSize } from './brush.ts';
 import type { Overlay } from './overlays.ts';
 
-export const TOOLS = ['terrain', 'raise', 'lower', 'flatten', 'ramp', 'region', 'place', 'select'] as const;
+export const TOOLS = ['terrain', 'raise', 'lower', 'flatten', 'region', 'place', 'select'] as const;
 export type Tool = (typeof TOOLS)[number];
 
 export const TOOL_LABELS: Record<Tool, string> = {
@@ -15,7 +15,6 @@ export const TOOL_LABELS: Record<Tool, string> = {
   raise: 'Raise',
   lower: 'Lower',
   flatten: 'Flatten',
-  ramp: 'Ramp',
   region: 'Region',
   place: 'Place',
   select: 'Select',

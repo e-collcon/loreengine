@@ -41,7 +41,8 @@ import {
 /* -------------------------------------------------------------------------- */
 
 /** v0.6.0 files are schema 1 and are rejected. */
-export const SCHEMA_VERSION = 2;
+/** 3: the ramp layer is gone; heights follow Catlike's slopes and cliffs (D194). 2 files migrate on load. */
+export const SCHEMA_VERSION = 3;
 /** Additive revisions only (L3). */
 export const SCHEMA_MINOR = 0;
 
@@ -315,7 +316,7 @@ export const TerrainDefSchema = z
 
 /**
  * The six neighbors, in the ported hex module's order (AXIAL_DIRS):
- * 1 E, 2 NE, 3 NW, 4 W, 5 SW, 6 SE. The ramp layer stores 0 or a HexDir.
+ * 1 E, 2 NE, 3 NW, 4 W, 5 SW, 6 SE.
  */
 export const HexDirSchema = z.literal([1, 2, 3, 4, 5, 6]);
 
@@ -422,8 +423,7 @@ export const MapDefSchema = z
     terrainPalette: z.array(id('terrain')).min(1), // the terrain layer stores palette indices
     layers: z.strictObject({
       terrain: u16Layer, //             length width*height
-      level: u8Layer, //                0..maxLevel
-      ramp: u8Layer, //                 0 = none; 1..6 = the HexDir the ramp rises toward
+      level: u8Layer, //                0..maxLevel; one level apart is a slope, more is a cliff
     }),
     playerStart: z.strictObject({ x: z.number(), y: z.number(), facing: z.number() }).optional(), // required on the start map
     placements: z.array(EntityPlacementSchema), // never the player: it spawns from playerArchetypeId

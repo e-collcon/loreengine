@@ -34,7 +34,7 @@ const base = `http://127.0.0.1:${server.address().port}/`;
 const scenes = [
   ['01-unit-behind-cliff', 'fixture=elevation&focus=8,2&zoom=1.7'],
   ['02-unit-on-plateau-edge', 'fixture=elevation&focus=8,6&zoom=1.7'],
-  ['03-unit-on-ramp', 'fixture=elevation&focus=5,4&zoom=1.7'],
+  ['03-unit-on-step', 'fixture=elevation&focus=5,4&zoom=1.7'],
   ['04-pick-on-raised-hex', 'fixture=elevation&focus=8,4&zoom=1.4&pick=9,4'],
   ['05-terraces-overview', 'fixture=elevation&focus=8,5&zoom=0.95'],
   ['06-emberfall-plateau', 'focus=22,9&zoom=0.8'],

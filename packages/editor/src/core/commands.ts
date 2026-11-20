@@ -1,5 +1,5 @@
 /**
- * Canvas commands (spec 8.7): paint, elevation, ramps, placements, regions.
+ * Canvas commands (spec 8.7): paint, elevation, placements, regions.
  * Each records what it needs to undo itself exactly; a brush stroke is one
  * command. Database edits do not go through here: they use Save and Cancel.
  */
@@ -24,8 +24,8 @@ export class LayerEdit implements Command {
     readonly label: string,
     readonly mapId: string,
     readonly cells: Int32Array,
-    readonly before: { terrain: Uint16Array; level: Uint8Array; ramp: Uint8Array },
-    readonly after: { terrain: Uint16Array; level: Uint8Array; ramp: Uint8Array },
+    readonly before: { terrain: Uint16Array; level: Uint8Array },
+    readonly after: { terrain: Uint16Array; level: Uint8Array },
     /** A terrain this stroke appended to the map's palette, removed again on undo. */
     readonly paletteAdded: Id<'terrain'> | null,
   ) {}
@@ -46,12 +46,11 @@ export class LayerEdit implements Command {
   }
 
   private write(map: MapDef, values: LayerEdit['before']): void {
-    const { terrain, level, ramp } = map.layers;
+    const { terrain, level } = map.layers;
     for (let i = 0; i < this.cells.length; i++) {
       const cell = this.cells[i]!;
       terrain[cell] = values.terrain[i]!;
       level[cell] = values.level[i]!;
-      ramp[cell] = values.ramp[i]!;
     }
   }
 }

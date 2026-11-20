@@ -7,7 +7,7 @@ import { BRUSH_SIZES, brushCells } from '../src/core/brush.ts';
 import { AddPlacement, AddRegion, CommandStack, RemovePlacement, UpdatePlacement } from '../src/core/commands.ts';
 import { Autosaver, EditorDocument } from '../src/core/document.ts';
 import type { Timers } from '../src/core/document.ts';
-import { LayerStroke, RegionStroke, nearestHexDir, regionCellSet } from '../src/core/strokes.ts';
+import { LayerStroke, RegionStroke, regionCellSet } from '../src/core/strokes.ts';
 
 const fresh = (): { project: Project; doc: EditorDocument; mapId: string } => {
   const project = buildEmberfall();
@@ -49,24 +49,14 @@ describe('strokes', () => {
     cells.forEach((c, i) => expect(map.layers.level[c]).toBe(before[i]));
   });
 
-  it('flatten sets the level under the first click and clears ramps', () => {
+  it('flatten sets the level under the first click', () => {
     const { project, mapId } = fresh();
     const map = project.maps[0]!;
     const cells = brushCells(5 * map.width + 5, 19, map.width, map.height);
-    map.layers.ramp[cells[3]!] = 2;
+    map.layers.level[cells[3]!] = 1;
     const stroke = new LayerStroke(project, 'Flatten', mapId);
     stroke.flatten(cells, 3);
-    for (const c of cells) {
-      expect(map.layers.level[c]).toBe(3);
-      expect(map.layers.ramp[c]).toBe(0);
-    }
-  });
-
-  it('ramp direction follows the drag', () => {
-    expect(nearestHexDir(0, 0, 1, 0)).toBe(1);
-    expect(nearestHexDir(0, 0, -1, 0)).toBe(4);
-    expect(nearestHexDir(0, 0, 0.5, -0.9)).toBe(2); // up the screen is -y
-    expect(nearestHexDir(0, 0, 0.5, 0.9)).toBe(6);
+    for (const c of cells) expect(map.layers.level[c]).toBe(3);
   });
 
   it('a terrain not in the palette is appended once and removed on undo', () => {
@@ -124,7 +114,7 @@ function randomCommand(doc: EditorDocument, rng: Rng): void {
     else if (kind === 1) stroke.raise(cells, 1);
     else if (kind === 2) stroke.raise(cells, -1);
     else if (kind === 3) stroke.flatten(cells, map.layers.level[cell]!);
-    else stroke.setRamp(cell, rng.nextInt(7) as 0 | 1 | 2 | 3 | 4 | 5 | 6);
+    else stroke.flatten([cell], rng.nextInt(project.settings.maxLevel + 1));
     doc.record(stroke.finish());
   } else if (kind === 5) {
     if (map.regions.length === 0 || rng.nextInt(4) === 0) {

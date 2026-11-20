@@ -36,17 +36,20 @@ const noDummies = (p: Project): Project => {
   return p;
 };
 
-describe('[P4A.path.ramps-route] ★ ramps route', () => {
+describe('[P4A.path.ramps-route] ★ the way up routes (slopes, D194)', () => {
   const at = (c: { col: number; row: number }) => c.row * A.width + c.col;
+  const stepCells = (r: { col: number; row: number; w: number; h: number }, width: number): Set<number> => { const out = new Set<number>(); for (let row = r.row; row < r.row + r.h; row++) for (let col = r.col; col < r.col + r.w; col++) out.add(row * width + col); return out; };
 
-  it('A* from low ground to the plateau goes through the ramp', () => {
+  it('A* from low ground to the plateau climbs through a level-1 cell (the step or the terrace)', () => {
     const sim = createSim(noDummies(buildElevation()), null, OPTS);
     const goal = cellCenter(A.plateauEdge.col, A.plateauEdge.row);
     const visited = walkTo(sim, 0, goal.x, goal.y);
     expect(sim.paths.lastStatus).toBe('found');
-    expect(visited).toContain(at(A.rampLow));
-    expect(visited).toContain(at(A.rampHigh));
-    expect(visited.indexOf(at(A.rampLow))).toBeLessThan(visited.indexOf(at(A.rampHigh)));
+    const levels = visited.map((c) => sim.world!.level[c]!);
+    const firstTop = levels.indexOf(2);
+    expect(firstTop).toBeGreaterThan(0);
+    expect(levels[firstTop - 1]).toBe(1); // the plateau is entered from one level below, never from the ground
+    expect(levels.slice(0, firstTop)).toContain(0);
     expect(cellOfEntity(sim, 0)).toBe(at(A.plateauEdge));
     expect(sim.entities.z[0]).toBe(1);
     // It arrives on the exact point asked for, not merely somewhere in the cell.
@@ -55,13 +58,10 @@ describe('[P4A.path.ramps-route] ★ ramps route', () => {
     for (let k = 1; k < visited.length; k++) expect(sim.world!.connects(visited[k - 1]!, visited[k]!, 'walk')).toBe(true);
   });
 
-  it('with the ramp removed, there is no path: the walker stops at the closest reachable point', () => {
+  it('with every level-1 cell lowered to the ground, there is no path: the walker stops at the closest reachable point', () => {
     const p = noDummies(buildElevation());
     const layers = p.maps[0]!.layers;
-    for (const ramp of [A.rampLow, A.rampHigh]) {
-      layers.ramp[at(ramp)] = 0;
-      layers.level[at(ramp)] = 0;
-    }
+    for (let i = 0; i < layers.level.length; i++) if (layers.level[i] === 1) layers.level[i] = 0;
     const sim = createSim(p, null, OPTS);
     const goal = cellCenter(A.plateauEdge.col, A.plateauEdge.row);
     const visited = walkTo(sim, 0, goal.x, goal.y);
@@ -72,7 +72,7 @@ describe('[P4A.path.ramps-route] ★ ramps route', () => {
     expect(sim.entities.hasGoal[0]).toBe(0);
   });
 
-  it('Emberfall: the plateau is reached over its two stacked ramps', () => {
+  it('Emberfall: the plateau is reached over its level-1 step', () => {
     const p = buildEmberfall();
     p.maps[0]!.placements = [];
     p.maps[0]!.triggers = [];
@@ -81,9 +81,10 @@ describe('[P4A.path.ramps-route] ★ ramps route', () => {
     const goal = cellCenter(EMBERFALL.sentry.col, EMBERFALL.sentry.row);
     const visited = walkTo(sim, 0, goal.x, goal.y, 4000);
     const cell = (c: { col: number; row: number }) => c.row * EMBERFALL.width + c.col;
-    expect(visited).toContain(cell(EMBERFALL.rampLow));
-    expect(visited).toContain(cell(EMBERFALL.rampHigh));
+    const step = stepCells(EMBERFALL.step, EMBERFALL.width);
+    expect(visited.some((c) => step.has(c))).toBe(true);
     expect(sim.world!.level[cellOfEntity(sim, 0)]).toBe(2);
+    void cell;
   });
 });
 

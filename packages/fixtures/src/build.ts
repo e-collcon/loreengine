@@ -41,7 +41,6 @@ export interface Rect {
 export class MapPainter {
   readonly terrain: Uint16Array;
   readonly level: Uint8Array;
-  readonly ramp: Uint8Array;
 
   constructor(
     readonly width: number,
@@ -49,7 +48,6 @@ export class MapPainter {
   ) {
     this.terrain = new Uint16Array(width * height);
     this.level = new Uint8Array(width * height);
-    this.ramp = new Uint8Array(width * height);
   }
 
   private each(rect: Rect, fn: (index: number) => void): void {
@@ -65,7 +63,6 @@ export class MapPainter {
     this.each(rect, (i) => {
       this.terrain[i] = paletteIndex;
       if (level !== undefined) this.level[i] = level;
-      this.ramp[i] = 0;
     });
     return this;
   }
@@ -79,17 +76,8 @@ export class MapPainter {
     return this;
   }
 
-  /** A ramp at (col, row): `level` is its low edge, `dir` (1..6) where it rises. */
-  setRamp(col: number, row: number, paletteIndex: number, level: number, dir: number): this {
-    const i = row * this.width + col;
-    this.terrain[i] = paletteIndex;
-    this.level[i] = level;
-    this.ramp[i] = dir;
-    return this;
-  }
-
   layers(): MapDef['layers'] {
-    return { terrain: this.terrain, level: this.level, ramp: this.ramp };
+    return { terrain: this.terrain, level: this.level };
   }
 }
 

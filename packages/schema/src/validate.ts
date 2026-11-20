@@ -26,7 +26,7 @@ export type ParseResult = { ok: true; project: Project } | { ok: false; issues: 
 
 /** The message a v0.6.0 (schema 1) file is rejected with. */
 export const SCHEMA_V1_MESSAGE =
-  'This file was made with LoreBrix v0.6.0 (schema 1). LoreEngine reads schema 2 and does not migrate v0.6.0 files.';
+  `This file was made with LoreBrix v0.6.0 (schema 1). LoreEngine reads schema ${SCHEMA_VERSION} and does not migrate v0.6.0 files.`;
 
 /** Version gate: the only thing read from a file before it is known to be ours. */
 export function checkVersion(raw: unknown): ValidationIssue | null {
@@ -59,10 +59,29 @@ function zodPath(path: PropertyKey[]): string {
   return out;
 }
 
-/** Validate a JSON-decoded project file. Typed-array layers are decoded from base64. */
+/**
+ * Schema 2 -> 3 (D194): maps lose their ramp layer. A ramp cell keeps its
+ * level, its low edge, so beside a cell one level up it becomes a slope.
+ */
+export function migrateSchema2(raw: Record<string, unknown>): Record<string, unknown> {
+  const maps = Array.isArray(raw['maps']) ? (raw['maps'] as Record<string, unknown>[]) : [];
+  return {
+    ...raw,
+    schemaVersion: 3,
+    schemaMinor: 0,
+    maps: maps.map((map) => {
+      const layers = (map?.['layers'] ?? {}) as Record<string, unknown>;
+      const { ramp: _ramp, ...rest } = layers;
+      return { ...map, layers: rest };
+    }),
+  };
+}
+
+/** Validate a JSON-decoded project file. Typed-array layers are decoded from base64. Schema 2 files are migrated first. */
 export function parseProject(raw: unknown): ParseResult {
   const version = checkVersion(raw);
   if (version) return { ok: false, issues: [version] };
+  if ((raw as { schemaVersion?: unknown }).schemaVersion === 2) raw = migrateSchema2(raw as Record<string, unknown>);
   const parsed = z.safeDecode(ProjectSchema, raw as z.input<typeof ProjectSchema>);
   if (!parsed.success) {
     return {
@@ -420,10 +439,9 @@ export function checkProject(project: Project): ValidationIssue[] {
     const path = `maps[${m}]`;
     const cells = map.width * map.height;
     map.terrainPalette.forEach((tid, i) => ref(terrainIds, tid, `${path}.terrainPalette[${i}]`, 'terrain'));
-    const { terrain, level, ramp } = map.layers;
+    const { terrain, level } = map.layers;
     if (terrain.length !== cells) bad(`${path}.layers.terrain`, 'layer-length', `Expected ${cells} cells, found ${terrain.length}.`);
     if (level.length !== cells) bad(`${path}.layers.level`, 'layer-length', `Expected ${cells} cells, found ${level.length}.`);
-    if (ramp.length !== cells) bad(`${path}.layers.ramp`, 'layer-length', `Expected ${cells} cells, found ${ramp.length}.`);
     for (let i = 0; i < terrain.length; i++) {
       if (terrain[i]! >= map.terrainPalette.length) {
         bad(`${path}.layers.terrain`, 'out-of-range', `Cell ${i} uses palette index ${terrain[i]}, but the palette has ${map.terrainPalette.length} entries.`);
@@ -433,12 +451,6 @@ export function checkProject(project: Project): ValidationIssue[] {
     for (let i = 0; i < level.length; i++) {
       if (level[i]! > project.settings.maxLevel) {
         bad(`${path}.layers.level`, 'out-of-range', `Cell ${i} is at level ${level[i]}, above maxLevel ${project.settings.maxLevel}.`);
-        break;
-      }
-    }
-    for (let i = 0; i < ramp.length; i++) {
-      if (ramp[i]! > 6) {
-        bad(`${path}.layers.ramp`, 'out-of-range', `Cell ${i} has ramp value ${ramp[i]}; it must be 0 (none) or a direction 1..6.`);
         break;
       }
     }

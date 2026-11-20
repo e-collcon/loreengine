@@ -3,8 +3,7 @@
  * edges, lint, regions, sight, brush) and the playtest's debug layer
  * (spec 8.5, 8.8). Everything is projected with the renderer's camera.
  */
-import { cornerOffsetX, cornerOffsetY, dirUnitX, dirUnitY } from '@loreengine/hexmath';
-import type { HexDir } from '@loreengine/hexmath';
+import { cornerOffsetX, cornerOffsetY } from '@loreengine/hexmath';
 import { hitboxOutline, screenX, screenY } from '@loreengine/render';
 import type { Camera } from '@loreengine/render';
 import { NO_ENTITY, PHASE_ACTIVE, PHASE_WINDUP } from '@loreengine/runtime/view';
@@ -67,8 +66,6 @@ export interface EditorOverlayInput {
   sight: Uint8Array | null;
   brush: number[];
   brushColor: string;
-  /** A ramp being dragged: its cell and the direction it would rise. */
-  rampPreview: { cell: number; dir: number } | null;
 }
 
 export function drawEditorOverlays(ctx: CanvasRenderingContext2D, p: Projector, o: EditorOverlayInput): void {
@@ -119,8 +116,7 @@ export function drawEditorOverlays(ctx: CanvasRenderingContext2D, p: Projector, 
       const y = o.world.centerY(cell);
       const sx = screenX(p.cam, p.ppu, x);
       const sy = screenY(p.cam, p.ppu, y, o.world.surfaceHeightIn(cell, x, y));
-      const ramp = o.world.ramp[cell]!;
-      const label = ramp ? `${o.world.level[cell]}↗${ramp}` : String(o.world.level[cell]);
+      const label = String(o.world.level[cell]);
       ctx.fillStyle = 'rgba(20, 22, 26, 0.65)';
       ctx.fillText(label, sx + 1, sy + 1);
       ctx.fillStyle = '#fffbe8';
@@ -135,19 +131,6 @@ export function drawEditorOverlays(ctx: CanvasRenderingContext2D, p: Projector, 
       hexPath(ctx, p, shape, w.cell, 0.8);
       ctx.stroke();
     }
-  }
-  if (o.rampPreview && o.rampPreview.dir >= 1 && o.rampPreview.dir <= 6) {
-    const { cell, dir } = o.rampPreview;
-    const x = o.world.centerX(cell);
-    const y = o.world.centerY(cell);
-    const tx = x + dirUnitX(dir as HexDir) * p.hexSize * 0.8;
-    const ty = y + dirUnitY(dir as HexDir) * p.hexSize * 0.8;
-    ctx.strokeStyle = '#fff27a';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(screenX(p.cam, p.ppu, x), screenY(p.cam, p.ppu, y, o.world.surfaceHeightIn(cell, x, y)));
-    ctx.lineTo(screenX(p.cam, p.ppu, tx), screenY(p.cam, p.ppu, ty, o.world.surfaceHeightIn(cell, tx, ty)));
-    ctx.stroke();
   }
   if (o.brush.length > 0) {
     ctx.strokeStyle = o.brushColor;
@@ -214,10 +197,10 @@ export function drawDebug(ctx: CanvasRenderingContext2D, p: Projector, view: Run
       ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.fillText(`${cell % world.width},${Math.floor(cell / world.width)}`, sx, sy - 6);
-      ctx.fillText(`L${world.level[cell]}${world.ramp[cell] ? `↗${world.ramp[cell]}` : ''}`, sx, sy + 6);
+      ctx.fillText(`L${world.level[cell]}`, sx, sy + 6);
     }
   }
-  if (t.blocked) drawEditorOverlays(ctx, p, { world, cells: [], levels: false, blocked, warnings: null, regions: null, sight: null, brush: [], brushColor: '', rampPreview: null });
+  if (t.blocked) drawEditorOverlays(ctx, p, { world, cells: [], levels: false, blocked, warnings: null, regions: null, sight: null, brush: [], brushColor: '' });
 
   const e = view.entities;
   for (let i = 0; i < e.highWater; i++) {

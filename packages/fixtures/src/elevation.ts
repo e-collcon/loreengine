@@ -3,13 +3,14 @@
  * render-spike tests. It reuses Emberfall's terrains, attacks, and art.
  *
  *   Terraces (16 x 12)
- *     - a level-2 plateau reached from the west by two stacked ramps
- *     - a level-1 terrace east of it, reached from the south by one ramp
+ *     - a level-2 plateau reached from the west by a three-cell-wide step at
+ *       level 1 (one level apart is a walkable slope; two is a cliff)
+ *     - a level-1 terrace east of it, walkable from every side
  *     - a pond, a rock pillar, and a level-3 rock spire
  *     - three inert dummies that set up the spike scenes:
  *         behind-cliff   on low ground north of the plateau (hidden by it)
  *         plateau-edge   on the plateau's southern edge
- *         on-ramp        on the upper stacked ramp
+ *         on-step        on the step, halfway up
  *     - a door region that teleports the player to the cellar
  *
  *   Cellar (8 x 8)
@@ -26,16 +27,14 @@ export const ELEVATION = {
     height: 12,
     playerStart: { col: 3, row: 9 },
     plateau: { col: 6, row: 2, w: 5, h: 5 },
-    rampLow: { col: 4, row: 4 }, //   level 0 -> 1, rising east
-    rampHigh: { col: 5, row: 4 }, //  level 1 -> 2, rising east
+    step: { col: 5, row: 3, w: 1, h: 3 }, // level 1 between the level-0 ground and the level-2 plateau
     terrace: { col: 11, row: 2, w: 3, h: 5 },
-    terraceRamp: { col: 12, row: 7 }, // level 0 -> 1, rising north-west (dir 3)
     pond: { col: 1, row: 6, w: 2, h: 2 },
     pillar: { col: 8, row: 9 },
     spire: { col: 2, row: 2 },
     behindCliff: { col: 8, row: 1 },
     plateauEdge: { col: 8, row: 6 },
-    onRamp: { col: 5, row: 4 },
+    onStep: { col: 5, row: 4 },
     door: { col: 14, row: 10 },
     arrival: { col: 13, row: 9 },
   },
@@ -91,10 +90,8 @@ export function buildElevation(): Project {
   const paintA = new MapPainter(A.width, A.height);
   paintA.fill({ col: 0, row: 0, w: A.width, h: A.height }, T.grass, 0);
   paintA.fill(A.plateau, T.stone, 2);
-  paintA.setRamp(A.rampLow.col, A.rampLow.row, T.dirt, 0, 1);
-  paintA.setRamp(A.rampHigh.col, A.rampHigh.row, T.dirt, 1, 1);
+  paintA.fill(A.step, T.dirt, 1);
   paintA.fill(A.terrace, T.dirt, 1);
-  paintA.setRamp(A.terraceRamp.col, A.terraceRamp.row, T.dirt, 0, 3);
   paintA.fill(A.pond, T.water, 0);
   paintA.fill({ ...A.pillar, w: 1, h: 1 }, T.rock, 0);
   paintA.fill({ ...A.spire, w: 1, h: 1 }, T.rock, 3);
@@ -115,7 +112,7 @@ export function buildElevation(): Project {
     terrainPalette: palette,
     layers: paintA.layers(),
     playerStart: { x: startA.x, y: startA.y, facing: -Math.PI / 2 },
-    placements: [place('behind-cliff', A.behindCliff), place('plateau-edge', A.plateauEdge), place('on-ramp', A.onRamp)],
+    placements: [place('behind-cliff', A.behindCliff), place('plateau-edge', A.plateauEdge), place('on-step', A.onStep)],
     regions: [
       { id: doorRegion, name: 'Door', cells: regionCells({ ...A.door, w: 1, h: 1 }) },
       { id: id('region', 'plateau'), name: 'Plateau', cells: regionCells(A.plateau) },

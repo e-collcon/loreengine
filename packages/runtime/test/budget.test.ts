@@ -20,13 +20,12 @@ const T = TERRAIN;
 const gc = (globalThis as { gc?: () => void }).gc;
 const heap = (): number => process.memoryUsage().heapUsed;
 
-/** A 64 x 64 arena with plateaus, ramps, ponds and rock, and `count` bodies scattered over it. */
+/** A 64 x 64 arena with plateaus, slopes up to them, ponds and rock, and `count` bodies scattered over it. */
 function arena(count: number, withBrains: boolean): Sim {
   return stageSim(64, 64, { col: 32, row: 32 }, (m, s) => {
     for (const [col, row] of [[8, 8], [40, 10], [12, 40], [44, 44]] as const) {
       m.fill({ col, row, w: 9, h: 7 }, T.stone, 2);
-      m.setRamp(col - 2, row + 3, T.dirt, 0, 1);
-      m.setRamp(col - 1, row + 3, T.dirt, 1, 1);
+      m.fill({ col: col - 1, row: row + 2, w: 1, h: 3 }, T.dirt, 1); // a level-1 step: slopes on both sides
     }
     m.fill({ col: 26, row: 20, w: 5, h: 4 }, T.water, 0);
     m.fill({ col: 30, row: 46, w: 3, h: 3 }, T.rock, 0);

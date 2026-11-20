@@ -5,6 +5,7 @@
  */
 import { SpatialHash } from '@loreengine/algorithms';
 import { offsetCol } from '@loreengine/hexmath';
+import { SCHEMA_VERSION } from '@loreengine/schema';
 import type {
   Action,
   ArchetypeDef,
@@ -846,7 +847,7 @@ export class Sim {
       }
     }
     return {
-      header: { schemaVersion: 2, projectId: this.project.id, contentRevision: this.project.contentRevision, savedAt, kind },
+      header: { schemaVersion: SCHEMA_VERSION, projectId: this.project.id, contentRevision: this.project.contentRevision, savedAt, kind },
       rng: this.rng.getState(),
       tick: this.tick,
       clockMode: this.clockMode,

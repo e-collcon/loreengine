@@ -85,7 +85,7 @@ export function terrainDefaults(
   return { moveCost: 1, blocksSight, blocksProjectiles: blocksSight };
 }
 
-/** An empty map: every cell terrain 0, level 0, no ramps. */
+/** An empty map: every cell terrain 0, level 0. */
 export function createMap(id: Id<'map'>, name: string, width: number, height: number, terrainId: Id<'terrain'>): MapDef {
   const cells = width * height;
   return {
@@ -94,7 +94,7 @@ export function createMap(id: Id<'map'>, name: string, width: number, height: nu
     width,
     height,
     terrainPalette: [terrainId],
-    layers: { terrain: new Uint16Array(cells), level: new Uint8Array(cells), ramp: new Uint8Array(cells) },
+    layers: { terrain: new Uint16Array(cells), level: new Uint8Array(cells) },
     playerStart: undefined,
     placements: [],
     regions: [],

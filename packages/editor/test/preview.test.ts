@@ -51,15 +51,19 @@ describe('map preview [P5A.preview]', () => {
 });
 
 describe('overlays', () => {
-  it('lint: the broken ramp appears in the warnings panel, with a place to focus [P5A.lint]', () => {
+  it('lint: the unreachable ledge appears in the warnings panel, with a place to focus [P5A.lint]', () => {
     const project = buildEmberfall();
     const map = project.maps[0]!;
     const preview = new MapPreview(project, map.id);
     const rows = warningRows(project, map, preview.raw);
-    const cell = EMBERFALL.brokenRamp.row * map.width + EMBERFALL.brokenRamp.col;
-    const row = rows.find((r) => r.code === 'ramp-leads-nowhere' && r.cell === cell);
+    const { ledge } = EMBERFALL;
+    const row = rows.find((r) => r.code === 'unreachable-area');
     expect(row).toBeDefined();
-    const c = cellCenter(EMBERFALL.brokenRamp.col, EMBERFALL.brokenRamp.row);
+    expect(row!.size).toBe(ledge.w * ledge.h);
+    const col = row!.cell! % map.width;
+    const r = Math.floor(row!.cell! / map.width);
+    expect(col >= ledge.col && col < ledge.col + ledge.w && r >= ledge.row && r < ledge.row + ledge.h).toBe(true);
+    const c = cellCenter(col, r);
     expect(row!.focus!.x).toBeCloseTo(c.x);
     expect(row!.focus!.y).toBeCloseTo(c.y);
   });
@@ -69,7 +73,6 @@ describe('overlays', () => {
     const map = project.maps[0]!;
     expect(blockedEdges(new MapPreview(project, map.id).raw).length).toBeGreaterThan(0);
     map.layers.level.fill(0);
-    map.layers.ramp.fill(0);
     const walkable = project.terrains.findIndex((t) => t.passable.walk);
     map.layers.terrain.fill(Math.max(0, map.terrainPalette.indexOf(project.terrains[walkable]!.id)));
     expect(blockedEdges(new MapPreview(project, map.id).raw).length).toBe(0);
@@ -79,7 +82,6 @@ describe('overlays', () => {
     const project: Project = buildElevation();
     const map = project.maps[0]!;
     map.layers.level.fill(0);
-    map.layers.ramp.fill(0);
     const open = project.terrains.find((t) => t.passable.walk && !t.blocksSight)!;
     if (!map.terrainPalette.includes(open.id)) map.terrainPalette.push(open.id);
     map.layers.terrain.fill(map.terrainPalette.indexOf(open.id));
