@@ -57,7 +57,7 @@ async function launch(args, gpu = false) {
   const b = await chromium.launch(gpu ? { headless: false, args } : { args: [...SOFTWARE_GL, ...args] });
   const p = await b.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   p.on('console', (m) => {
-    if (m.type() === 'error' || m.type() === 'warning') problems.push(`${m.type()}: ${m.text()}`);
+    if (m.type() === 'error' || m.type() === 'warning') problems.push(`${m.type()}: ${m.text()}${m.location()?.url ? ` (${m.location().url})` : ''}`);
   });
   p.on('pageerror', (e) => problems.push(String(e)));
   return { b, p };
