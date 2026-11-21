@@ -43,6 +43,11 @@ export function hudModel(view: RuntimeView, list: DrawList): HudModel {
   return { player: p >= 0 ? { hp: e.hp(p), max: e.hpMax(p) } : null, bars, prompt, outcome: view.outcome };
 }
 
+/** HUD styling from the LoreEngine design system (dark glass). Fonts fall back to the system when a page has not loaded them. */
+const SANS = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
+const PIXEL = "'Departure Mono', ui-monospace, Menlo, monospace";
+const GLASS = 'background:rgba(27,32,30,.78);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.07),0 0 0 1px rgba(0,0,0,.45),0 12px 28px -10px rgba(0,0,0,.6)';
+
 /** The DOM overlay. Create it over the canvas; call `update` once a frame. */
 export class Hud {
   readonly root: HTMLDivElement;
@@ -62,13 +67,13 @@ export class Hud {
       parent.appendChild(d);
       return d;
     };
-    this.root = el('position:absolute;inset:0;pointer-events:none;font:13px/1.4 system-ui,sans-serif;color:#eef2f7;overflow:hidden', host);
-    this.health = el('position:absolute;left:16px;bottom:16px;width:220px;height:16px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);border-radius:4px', this.root);
-    this.healthFill = el('height:100%;background:#d8443c;border-radius:3px;width:100%', this.health);
-    this.prompt = el('position:absolute;left:50%;bottom:64px;transform:translateX(-50%);padding:6px 12px;background:rgba(0,0,0,.7);border-radius:6px;display:none', this.root);
+    this.root = el(`position:absolute;inset:0;pointer-events:none;font:500 13px/1.4 ${SANS};color:#edf2ef;overflow:hidden`, host);
+    this.health = el(`position:absolute;left:16px;bottom:16px;width:220px;height:14px;padding:2px;${GLASS};border-radius:999px`, this.root);
+    this.healthFill = el('height:100%;background:#f05a46;border-radius:999px;width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)', this.health);
+    this.prompt = el(`position:absolute;left:50%;bottom:64px;transform:translateX(-50%);padding:7px 14px;${GLASS};border-radius:999px;display:none`, this.root);
     this.toasts = el('position:absolute;left:50%;top:18%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center', this.root);
     this.bars = el('position:absolute;inset:0', this.root);
-    this.banner = el('position:absolute;inset:0;display:none;align-items:center;justify-content:center;font:600 44px system-ui,sans-serif;background:rgba(0,0,0,.45);letter-spacing:.06em', this.root);
+    this.banner = el(`position:absolute;inset:0;display:none;align-items:center;justify-content:center;font:400 44px/1 ${PIXEL};background:rgba(11,14,13,.55);letter-spacing:.04em`, this.root);
     this.cursor = view.presentation.end;
   }
 
@@ -82,9 +87,9 @@ export class Hud {
     // Health bars: reuse elements, hide the spare ones.
     while (this.bars.children.length < model.bars.length) {
       const bar = document.createElement('div');
-      bar.style.cssText = 'position:absolute;width:44px;height:5px;margin-left:-22px;background:rgba(0,0,0,.6);border-radius:2px';
+      bar.style.cssText = 'position:absolute;width:44px;height:5px;margin-left:-22px;background:rgba(11,14,13,.75);box-shadow:0 0 0 1px rgba(0,0,0,.6);border-radius:999px';
       const fill = document.createElement('div');
-      fill.style.cssText = 'height:100%;background:#f0c040;border-radius:2px';
+      fill.style.cssText = 'height:100%;background:#f2b84b;border-radius:999px';
       bar.appendChild(fill);
       this.bars.appendChild(bar);
     }
@@ -103,7 +108,7 @@ export class Hud {
       if (event.kind !== 'message') return;
       const toast = document.createElement('div');
       toast.textContent = event.s;
-      toast.style.cssText = 'padding:8px 14px;background:rgba(10,12,16,.82);border:1px solid rgba(255,255,255,.2);border-radius:6px;font-size:15px';
+      toast.style.cssText = `padding:8px 16px;${GLASS};border-radius:999px;font-size:15px;font-weight:500`;
       this.toasts.appendChild(toast);
       this.live.push({ el: toast, until: nowMs + event.n });
     });

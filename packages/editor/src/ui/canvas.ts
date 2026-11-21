@@ -75,7 +75,7 @@ export class CanvasController {
     const preview = new MapPreview(session.project, session.state.mapId);
     const width = Math.max(1, host.clientWidth);
     const height = Math.max(1, host.clientHeight);
-    const renderer = await PixiRenderer.create(preview, { canvas, width, height, resolution: Math.min(2, window.devicePixelRatio || 1), background: 0x1b1d22 });
+    const renderer = await PixiRenderer.create(preview, { canvas, width, height, resolution: Math.min(2, window.devicePixelRatio || 1), background: 0x0b0e0d }); // design token --canvas
     const controller = new CanvasController(session, renderer, host, canvas, overlay, preview);
     if (session.art) {
       controller.art = session.art;
@@ -217,7 +217,7 @@ export class CanvasController {
       regions,
       sight,
       brush: this.brushUnder(this.hoverCell),
-      brushColor: s.tool === 'region' && s.eraseRegion ? '#ff6b5e' : '#fff27a',
+      brushColor: s.tool === 'region' && s.eraseRegion ? '#f59a86' : '#5fe3c6', // danger / tosca-strong
     });
     if (selected >= 0) {
       const e = this.preview.entities;
