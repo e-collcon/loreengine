@@ -46,7 +46,8 @@ export function hudModel(view: RuntimeView, list: DrawList): HudModel {
 /** HUD styling from the LoreEngine design system (dark glass). Fonts fall back to the system when a page has not loaded them. */
 const SANS = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
 const PIXEL = "'Departure Mono', ui-monospace, Menlo, monospace";
-const GLASS = 'background:rgba(27,32,30,.78);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.07),0 0 0 1px rgba(0,0,0,.45),0 12px 28px -10px rgba(0,0,0,.6)';
+// No backdrop blur: the game canvas redraws every frame, and a blur over it would cost GPU time inside the 8 ms frame budget (D203).
+const GLASS = 'background:rgba(27,32,30,.86);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.07),0 0 0 1px rgba(0,0,0,.45),0 12px 28px -10px rgba(0,0,0,.6)';
 
 /** The DOM overlay. Create it over the canvas; call `update` once a frame. */
 export class Hud {
