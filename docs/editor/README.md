@@ -31,3 +31,13 @@ npm run dev -w @loreengine/editor
 ```
 
 Tools: B terrain, R raise, L lower, F flatten, G region, P place, V select (one level apart is a walkable slope, two or more a cliff; there is no ramp tool since D194); `[` `]` brush size; Ctrl+Z / Ctrl+Shift+Z; Delete; Ctrl+D duplicate; right-drag or Space+drag pans; the wheel zooms. Play, or Play from here (the hovered cell); Esc leaves the playtest. The project autosaves to IndexedDB 2 s after the last change. The databases, settings, triggers and assets open from the left panel; "← Map" returns to the canvas.
+
+## `ui-v2/` — the LoreEngine UI (21 Nov 2026)
+
+The same editor after D201–D204: the LoreEngine Design System v2 (glass panes over a full-window canvas, Plus Jakarta Sans and Departure Mono, Tosca and Electric Purple). Taken at 1440 × 900, 2×, in headless Chromium with software rendering.
+
+| File | Shows |
+|---|---|
+| `ui-v2/01-editor.png` | The editor on Emberfall: the top bar with ▶ Play as the gradient primary, the left panel, the inspector, the status bar |
+| `ui-v2/02-database-attacks.png` | The databases pane over the canvas, Attacks open, with the hitbox preview and the windup / active / recovery timeline |
+| `ui-v2/03-playtest.png` | The playtest with its glass control bar and the HUD's health pill |

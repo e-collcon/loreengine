@@ -147,7 +147,7 @@ export function drawSelection(ctx: CanvasRenderingContext2D, p: Projector, x: nu
   const sx = screenX(p.cam, p.ppu, x);
   const sy = screenY(p.cam, p.ppu, y, z);
   const r = radius * p.ppu * p.cam.zoom;
-  ctx.strokeStyle = '#fff27a';
+  ctx.strokeStyle = '#5fe3c6'; // tosca-strong
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.ellipse(sx, sy, r, r * 0.5, 0, 0, Math.PI * 2);

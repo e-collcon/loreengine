@@ -1,0 +1,105 @@
+/*
+ * LoreEngine design tokens, from the LoreEngine Design System (v2).
+ * The editor ships the dark theme only for v0.2 (the light theme is a v0.2 backlog item).
+ * Fonts are SIL OFL 1.1; their licenses sit beside the files in ./fonts.
+ */
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('./fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('./fonts/DepartureMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* grounds */
+  --void: #0f1211;
+  --glow-tosca: #35c6a733;
+  --glow-purple: #a99cff2b;
+  --glass: #1b201ed1; /* 82%: denser than the design system's 72%, because the map behind the editor is busier than an ambient glow (D201) */
+  --glass-strong: #202624e6;
+  --glass-edge: #ffffff29;
+  --surface: #1a1e1d;
+  --surface-raised: #232827;
+  --well: #141817;
+  --canvas: #0b0e0d;
+  --line: #ffffff14;
+  --line-strong: #ffffff2e;
+  --hover: #ffffff0f;
+  --outline: #000000;
+
+  /* text */
+  --ink: #edf2ef;
+  --ink-2: #b3bdb9;
+  --ink-3: #87938e;
+
+  /* identity */
+  --tosca: #35c6a7;
+  --tosca-strong: #5fe3c6;
+  --tosca-tint: #0c2b2a;
+  --tosca-edge: #35c6a7;
+  --on-tosca: #04221c;
+  --electric-purple: #a99cff;
+  --electric-purple-strong: #c7bfff;
+  --electric-purple-tint: #1f1b3d;
+  --action-from: #35c6a7;
+  --action-to: #a99cff;
+  --on-action: #04221c;
+
+  /* state */
+  --success: #5fd38d;
+  --success-soft: #12301f;
+  --warning: #f2b84b;
+  --warning-soft: #33270d;
+  --danger: #f59a86;
+  --danger-soft: #3a1c17;
+  --info: #8ab4ff;
+  --info-soft: #15264a;
+  --focus-ring: #5fe3c6;
+
+  /* type */
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-pixel: 'Departure Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* spacing, radius, sizes */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --size-control-sm: 26px;
+  --size-control: 32px;
+
+  /* glass and depth */
+  --glass-blur: blur(24px) saturate(140%);
+  --glass-blur-strong: blur(40px) saturate(200%);
+  --shadow-glass: inset 0 1px 0 #ffffff29, inset 0 0 0 1px #ffffff12, 0 0 0 1px #00000073, 0 24px 56px -16px #000000a6, 0 8px 20px -8px #00000066;
+  --shadow-card: inset 0 1px 0 #ffffff14, 0 0 0 1px #00000059, 0 2px 4px #00000040;
+  --shadow-control: inset 0 1px 0 #ffffff26, inset 0 -1px 0 #00000040, 0 0 0 1px #00000080, 0 1px 2px #00000059;
+  --shadow-pressed: inset 0 1px 2px #00000080, 0 0 0 1px #00000080;
+  --shadow-hard: 0 2px 0 #000000;
+  --shadow-well: inset 0 0 0 1px #ffffff0f, inset 0 2px 4px #00000040;
+  --shadow-pop: inset 0 1px 0 #ffffff29, 0 0 0 1px #00000080, 0 16px 40px #00000099;
+
+  /* motion */
+  --dur-swap: 150ms;
+  --dur-quick: 200ms;
+  --dur-pop: 280ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.34, 1.35, 0.64, 1);
+}

@@ -14,6 +14,7 @@ Session of 17 Nov 2026 (GMT+7), started 00:47. Hard stop 14:59; no new chunk aft
 | 8 Editor shell (5A) | **Green** | `chunk-8-green` (ad23289) | about 2h (green 22:17) | Editor document and 200-command undo, map preview over the headless `World`, terrain / raise / lower / flatten / ramp / region / place / select tools, overlays (levels, blocked edges, lint with click-to-focus, regions, sight), inspector, autosave to IndexedDB, playtest overlay with debug overlays, pause and step, repro files. Four screenshots in `docs/editor/`. |
 | 9 Database editors (5B) | **Green** | `chunk-9-green` (06d3e4a) | 0h31 | Forms generated from the schema for every database, settings and trigger part (★ every variant authorable), staged Save / Cancel with inline and project validation, terrain passability matrix, faction grid, attack hitbox preview and timeline, animation preview, previews on the player for effects, feedback and particles, trigger editor, asset panel (import files, folders, zips; bake written back), component-section overrides in the inspector. Six more screenshots in `docs/editor/`. |
 | Elevation rework (N6) | **Green** | — (90594b4) | 20 Nov 2026 | E's N6 ruling: heights follow Catlike Coding's Hex Map. Flat inner hexes; one level apart is a walkable terraced slope, two or more a cliff; ramps removed (schema 3, schema-2 files migrate on load); fixtures re-authored (Emberfall's step and ledge); renderer draws bridges, corners and cliff faces from the runtime's surface; Ramp tool removed from the editor. D194–D199. |
+| LoreEngine UI (v0.2, W2) | **Green** | — (branch `claude/loreengine-ui`) | 21 Nov 2026 | The editor restyled with the LoreEngine Design System v2: glass panes over a full-window canvas, Plus Jakarta Sans and Departure Mono, the Tosca-to-purple action gradient, a matching HUD skin. Markup and class names unchanged; no test edits. D201–D204. |
 
 ## Gate results (latest)
 
@@ -73,6 +74,8 @@ All ten are answered (E, 20 Nov 2026; each ruling is recorded under its entry in
 - The player page bakes its art at startup, which takes a second or two in software-rendered headless Chromium; until then it draws the engine's placeholder shapes.
 
 ## Next step
+
+**v0.2 is planned in `V0.2_PLAN.md`** (21 Nov 2026): QA fixes, the LoreEngine UI (first part done, D201–D204), the editor gaps a whole game needs, an art contract for Lexie's demo-game art, CI and the release. What follows below is the v0.1 build's own closing note.
 
 **All nine chunks of the kickoff are built and green.** Phase 6 and later are out of scope for this build (kickoff), so the next steps are E's:
 
