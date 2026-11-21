@@ -55,7 +55,7 @@ npm run bench:render
 
 ## Needs E
 
-All ten are answered (E, 20 Nov 2026; each ruling is recorded under its entry in `docs/DECISIONS_LOG.md`). N1, N2, N4, N7: accepted. N3: the squash stays unauthored (it is the camera pitch now). N5: E pushes the tags (commands in chat). N8: keep for now. N9: approved. N10: the 55° camera is confirmed. **N6: the height model changed** to Catlike Coding's Hex Map (pure rule, terraced slopes), built the same day: D193–D199 and the "Elevation rework" row above.
+All ten are answered (E, 20 Nov 2026; each ruling is recorded under its entry in `Context/DECISIONS_LOG.md`). N1, N2, N4, N7: accepted. N3: the squash stays unauthored (it is the camera pitch now). N5: E pushes the tags (commands in chat). N8: keep for now. N9: approved. N10: the 55° camera is confirmed. **N6: the height model changed** to Catlike Coding's Hex Map (pure rule, terraced slopes), built the same day: D193–D199 and the "Elevation rework" row above.
 
 ## Known issues
 

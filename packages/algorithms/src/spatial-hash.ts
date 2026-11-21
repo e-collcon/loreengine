@@ -5,7 +5,7 @@
  * v0.6.0 kept `Map<"col,row", Set<uuid>>` plus a `lastCellKeys` map, with
  * `indexEntity` / `unindexEntity` / `reindexEntity`, `entitiesAt(cell)` and
  * a cell-range scan for rect queries. Those five operations are kept one for
- * one. What changed, and why (logged in docs/DECISIONS_LOG.md):
+ * one. What changed, and why (logged in Context/DECISIONS_LOG.md):
  *   - Buckets are keyed by dense cell index and hold entity *indices*, in
  *     intrusive linked lists over preallocated Int32Arrays. v0.6.0 built a
  *     string key and could allocate a Set on every move; law L8 requires

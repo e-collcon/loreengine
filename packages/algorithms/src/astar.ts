@@ -5,7 +5,7 @@
  * The search loop, the heap, the lazy-deletion closed set, the cost model
  * (entering a cell costs that cell's moveCost) and the cube-distance
  * heuristic are the v0.6.0 logic. Changes, each logged in
- * docs/DECISIONS_LOG.md:
+ * Context/DECISIONS_LOG.md:
  *   1. Square-grid branches removed (Q16: hex-iso only).
  *   2. Cells are dense indices (row * width + col) instead of `GridPos`
  *      objects: the adapter edge.

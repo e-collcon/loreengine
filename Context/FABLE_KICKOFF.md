@@ -10,9 +10,9 @@ You are building the foundation of **LoreEngine**, a browser-based 2D hex-isomet
 
 | File | Role |
 |---|---|
-| `docs/FOUNDATION_DESIGN.md` | **The spec you implement.** Phases 1–5 of LoreEngine. Every requirement, type, budget, and test is in it. |
-| `docs/PHASE6_DESIGN.md` … `docs/PHASE15_DESIGN.md` | **Context only.** Later phases. Do not implement them. Read their §R sections only to understand which seams the foundation must leave open. |
-| `docs/PHASE5.5_DESIGN.md`, `docs/ROADMAP_v0.md`, `docs/ARCHITECTURE.md`, `docs/FEATURES.md` | **History.** They explain why the spec looks the way it does. Never implement from them. |
+| `Context/FOUNDATION_DESIGN.md` | **The spec you implement.** Phases 1–5 of LoreEngine. Every requirement, type, budget, and test is in it. |
+| `Context/PHASE6_DESIGN.md` … `Context/PHASE15_DESIGN.md` | **Context only.** Later phases. Do not implement them. Read their §R sections only to understand which seams the foundation must leave open. |
+| `Context/PHASE5.5_DESIGN.md`, `Context/ROADMAP_v0.md`, `Context/ARCHITECTURE.md`, `Context/FEATURES.md` | **History.** They explain why the spec looks the way it does. Never implement from them. |
 
 **Read first:** sections 1–4 (scope, laws, map of the work, Phase 1), then 9 (budgets and gates) and 10 (build order). Read each later section when you reach its chunk.
 
@@ -31,13 +31,13 @@ Follow section 10 of the spec. Each chunk ends green and tagged, so stopping any
 
 **Clock rules:**
 
-- After each chunk, record its elapsed time in `docs/PROGRESS.md` and use your measured pace to judge the next one.
+- After each chunk, record its elapsed time in `Context/PROGRESS.md` and use your measured pace to judge the next one.
 - Do not start a chunk you cannot finish green before **13:30 GMT+7**.
 - From 13:30, only finish, fix, and write the handoff (section 7 below).
 
 ## 3. Deciding things without E
 
-1. **The spec wins.** Where it is silent, choose the smallest design consistent with its laws (section 2 of the spec) and record the choice in `docs/DECISIONS_LOG.md`: what, why, and which section it touches.
+1. **The spec wins.** Where it is silent, choose the smallest design consistent with its laws (section 2 of the spec) and record the choice in `Context/DECISIONS_LOG.md`: what, why, and which section it touches.
 2. **The schema is a hot file (law L4).** Implement it exactly as specified. If you must deviate, make the smallest change, and log it under a **Needs E** heading with the reason.
 3. **Never weaken, skip, or delete a test to get green.** If a signature test cannot pass, log it under **Needs E**, leave the chunk untagged, and move only to work the build order says does not depend on it.
 4. **The spike gate (after chunk 4) is asynchronous.** Save screenshots of the four fixture scenes to `docs/spike/`: a unit behind a cliff, a unit on a plateau edge, a unit on a ramp, and a pick on a raised hex. Then continue to chunk 5, which is headless and does not depend on the renderer. E reviews later.
@@ -57,7 +57,7 @@ Three modules carry over: hex math, A\*, and the spatial hash. In v0.6.0 they li
   - Leave the `TileEngine` class, the entity class hierarchy, and every other part behind. The spec replaces them.
 - **Keep the logic verbatim and adapt at the edges.** Write thin adapters to the spec's API. Change the algorithm only where the spec requires it, for example the elevation-aware `connects` for A\*, and log each such change.
 - **Write the tests yourself,** exhaustively. Cover round-trips over the whole 256 × 256 range, all six neighbors at odd and even rows, `cubeRound` at hex boundaries, `pixelToHex ∘ hexToPixel` identity, and A\* optimality against a brute-force reference on small random maps. Log under **Needs E** that the original suites were not available.
-- **If `legacy/` is absent** when you start, implement fresh against the spec and `docs/ARCHITECTURE.md` (pointy-top hexes, odd-r offset storage, cube-coordinate math), with the same tests, and log it.
+- **If `legacy/` is absent** when you start, implement fresh against the spec and `Context/ARCHITECTURE.md` (pointy-top hexes, odd-r offset storage, cube-coordinate math), with the same tests, and log it.
 
 The Lovable design system (`src/index.css`, `tailwind.config.js`, and the shared UI atoms) is needed only from chunk 8. If it is absent when you get there, use plain styling and log it.
 
@@ -75,7 +75,7 @@ The first budget bench run establishes real numbers. If a time budget in spec se
 
 ## 7. What you leave behind
 
-Keep `docs/PROGRESS.md` current after every chunk. It is what the next implementer starts from.
+Keep `Context/PROGRESS.md` current after every chunk. It is what the next implementer starts from.
 
 ```markdown
 # LoreEngine — Build Progress

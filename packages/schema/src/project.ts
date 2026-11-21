@@ -4,7 +4,7 @@
  * ============================================================================
  *  This file changes only with E's approval. Every authored type and every
  *  structural validator is derived from the Zod schemas below; nothing
- *  re-declares them by hand. It implements docs/FOUNDATION_DESIGN.md §4.5.
+ *  re-declares them by hand. It implements Context/FOUNDATION_DESIGN.md §4.5.
  *
  *  Rules for editing (L3):
  *    - Adding an optional field or a new top-level collection is a MINOR
