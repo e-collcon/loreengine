@@ -4,6 +4,8 @@ Written 24 Nov 2026 (Claudia) for v0.2 (`V0.2_PLAN.md` W5 and W8). This file is 
 
 **What changed on 24 Nov:** terrain is now **Civ-style** (D205, `FOUNDATION_DESIGN.md` 6.6a). There are no per-hex tiles any more. Sections 1–3 are new. Section 4 (characters and props) is the earlier W5 contract, unchanged.
 
+**Checked against the engine code the same evening:** decoration is drawn from the camera's 55°, contact shadows are ellipses about 5 wide to 4 tall, the first batch carries grassland in both styles so E can choose, and section 6 says why the per-hex Dordogne tiles looked stretched in the engine.
+
 ---
 
 ## 0. Numbers every piece shares
@@ -46,6 +48,7 @@ The engine tiles each ground texture across the whole map in world space and ble
 **Should**
 - **Make terrains easy to tell apart.** Distinct terrains should differ in hue and in average brightness. The texture's average color becomes the terrain's color on the area map and minimap.
 - **Split the work with decoration.** The texture carries the fine grain (grass, leaf litter, gravel); decoration carries the things you notice (trees, boulders, flower clumps).
+- **Keep each file under 2 MB.** Sources stay in the project and travel with every export. An SVG too dense for that is better sent as a PNG or WebP.
 
 **The Dordogne demo set** (10 ground textures; the engine caps a project at 16 ground and cliff textures together):
 
@@ -97,9 +100,9 @@ Decoration is scattered over the ground by the engine, a few items per hex, alwa
 - **Size:** the SVG's width and height are its size on screen at zoom 1 (64 px = 1 unit). Crop tightly to the drawing plus its shadow.
 
 **Must**
-1. **Draw it as the game sees it:** upright, seen from a little above. Show a little of the tops of rocks and canopies; not a straight side view, not top-down.
+1. **Draw it as the game sees it: from 55° above the horizon,** the camera's angle. The tops of rocks, stumps and canopies show clearly; it is neither a side view nor straight down. Draw it upright and at its true proportions: the engine does not squash sprites.
 2. **Set the anchor where it touches the ground** (`<circle id="anchor" cx=".." cy=".." r="0"/>`). Without one, the anchor is bottom center.
-3. **Give each item a soft contact shadow:** a semi-transparent ellipse at its base, inside the SVG. The engine casts no shadows.
+3. **Give each item a soft contact shadow:** a semi-transparent ellipse at its base, inside the SVG, about 5 wide to 4 tall (a circle on the ground seen from 55°). The engine casts no shadows.
 4. **Light from above, not from one side.** The engine mirrors items at random and scales them between 90% and 110%.
 5. **No lettering and no logos.**
 
@@ -149,6 +152,7 @@ The engine rasterizes SVGs in the browser as images. In that mode, anything outs
 ## 6. Do not send
 
 - Per-hex tiles, hex-shaped art, or tiles with outlines, for the Civ-style look. The old per-hex mode still exists for other projects, but the demo does not use it.
+  - Where another project does use per-hex art, draw it top-down in a 111 × 128 box. The old 112 × 64 box was made for the first prototype camera. At today's 55° camera a hex is about 111 × 105 px on screen, so the engine stretches a 112 × 64 tile 1.64 times taller. That is why the Dordogne hexes' rows looked thick in the engine (D207).
 - Transition or auto-tile sets (RPG Maker A2 blocks, 47-tile blob sets). The engine blends terrains itself.
 - Ground drawn in isometric or perspective view.
 - Rivers or roads painted into ground textures. They come later, as edge features.
@@ -171,12 +175,14 @@ dordogne-terrain/
 
 **First batch (the proof):**
 - 3 ground textures: grassland, meadow, woods-floor;
+- grassland a second time in the other style: once as a painted PNG and once as a flat-vector SVG, so E can choose (section 8, item 2);
 - 1 cliff texture: limestone;
 - 4 decoration items: two trees, one boulder, one grass tuft.
 
-Claudia-Code loads them into the elevation fixture as soon as the Civ-style terrain lands, and posts screenshots before the rest are drawn.
+They go into the elevation fixture as soon as the Civ-style terrain lands, and E sees screenshots before the rest are drawn.
 
 ## 8. Open for E
 
 1. **Tree scale.** In Civilization, trees are tiny next to units, because units there are tokens. In an action RPG the hero should read as smaller than a tree; the sizes above make a tree about 1 to 1.5 times the hero's height. E decides after the proof screenshots.
-2. **Painted PNG or flat vector SVG for the ground.** Both are accepted. Painted textures are closer to Civilization VI; vector matches the characters' style.
+2. **Painted PNG or flat vector SVG for the ground.** Both are accepted. Painted textures are closer to Civilization VI; vector matches the characters' style. The first batch carries grassland in both, so E chooses by looking.
+3. **The angle figures are drawn from.** Section 4 fixes the figures' box and facing but not the view angle, while decoration is now drawn from 55°. Lean: figures from the same 55° (a three-quarter view from above, as in Diablo), so units and trees look like one world. E decides before Lexie draws the hero.

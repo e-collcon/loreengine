@@ -831,7 +831,7 @@ The renderer is PixiJS on WebGL (Q3). It reads the runtime view and never writes
 | Mode | When | Drawn as |
 | --- | --- | --- |
 | **Ground** (v6) | `ground` is set | The texture tiled in world space and blended with the neighbors (below) |
-| **Per-hex** (v0.1) | Only `top` is set | The `top` frame stretched over the cell's whole mesh, as today. Kept so v0.1 projects and hex-tile packs still work |
+| **Per-hex** (v0.1) | Only `top` is set | The `top` frame stretched over the cell's whole mesh, as today. Kept so v0.1 projects and hex-tile packs still work. The frame covers the hex's bounding box seen straight down, so per-hex art is drawn top-down in a √3 : 2 box (111 × 128 px); a 112 × 64 tile, the first spike camera's box, renders 1.64× too tall at 55° (D207) |
 | **Neutral** | Neither is set | A flat fill in the engine's neutral gray |
 
 Within one map, cells of different modes may touch; they do not blend, so their border stays hard. A map should use one mode; the editor's lint warns when it mixes them.
@@ -884,7 +884,7 @@ Inside the inner hex the own terrain still wins outright (its `h` exceeds the ot
 - World-space sampling: a pixel on the shared border samples the same texture coordinate from both cells.
 - Decoration is deterministic: the same map always gives the same items. Items stay inside their region, at least 0.3 apart, never near a placement, and editing one cell only changes that cell's items.
 - A v0.1 project (only `top`) renders exactly as before (snapshot), and validates without migration.
-- Import refuses a ground texture that is not square or not a power of two, with a message that says so.
+- Import refuses a ground texture that is not square, or a PNG or WebP that is not 512 or 1024 px (6.7), with a message that says so.
 - The render bench in ground mode meets the 8 ms budget on E's machine.
 
 ### 6.7 Vector art pipeline
@@ -899,7 +899,7 @@ Vector art is baked, not drawn live, because thousands of SVG paths per frame wo
 Sources stay in the project, so changing `pixelsPerUnit` or adding a tier is a re-bake, never re-drawing.
 
 **Ground and cliff textures (v6) are not atlas frames.** They are image assets used whole:
-- **Accepted:** an SVG is rasterized once, in the browser, to 1024 × 1024; a PNG or WebP is used as it is when it is square and 512 or 1024 px; anything else is refused with a message.
+- **Accepted:** a square SVG is rasterized once, in the browser, to 1024 × 1024; a PNG or WebP is used as it is when it is square and 512 or 1024 px; anything else is refused with a message.
 - **Mipmaps** are built at upload, and the texture's average color is stored as its default `mapColor`.
 - **Decoration sprites** are ordinary atlas frames with an anchor at their base, baked like characters.
 
