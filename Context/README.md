@@ -10,6 +10,7 @@ Everything a new session (any Claudia, Lexie, or a fresh agent) needs to get up 
 | `DECISIONS_LOG.md` | Every implementation decision (D1–D200) with its reason, plus **Needs E** (N1–N10) and E's rulings on each. Check here before changing anything that looks odd: it is usually deliberate. |
 | `QA_CHECKLIST.md` | The 75 human QA checks for v0.1. The live, tickable version (where E's results are saved) is https://claude.ai/artifact/5myArj1Ln5ycQgjKDVPbgz. |
 | `V0.2_PLAN.md` | What comes between v0.1 and Phase 6: the stable v0.2 release, its workstreams, decisions for E and exit criteria. |
+| `ART_CONTRACT.md` | For artists (Lexie first): what the engine accepts, at what size and named how. Ground and cliff textures and decoration for the Civ-style terrain (D205), then characters and props. |
 
 ## 2. What was asked for
 

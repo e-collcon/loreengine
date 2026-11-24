@@ -325,3 +325,18 @@ Started at E's request after the hard stop ("you only used like 9% of your 5-hou
 - **D202 — Dark theme only, for now.** The renderer takes its background color once, when it is created (`PixiRenderer.create({ background })`), so a live theme switch would need a renderer method or a transparent canvas. The canvas uses the `--canvas` token, `#0b0e0d`. Light theme: v0.3 list (`V0.2_PLAN.md`, V4).
 - **D203 — A placeholder skin for the HUD** (`player/src/hud.ts`): glass pills for the prompt and messages, a pill health bar, the outcome banner in Departure Mono. Only inline styles changed, not the HUD model. The standalone player page loads no web fonts, so it falls back to system fonts; in the editor's playtest the editor's fonts apply. In-game UI is per game in the long run (Lexie's UI kit), so this is a stand-in. **The HUD has no backdrop blur**, unlike the editor's glass: the game canvas redraws every frame, so a blur under the HUD would be paid inside the 8 ms frame budget. The HUD uses an 86% opaque fill instead.
 - **D204 — Overlay colors on the canvas:** the brush outline and the selection ring are Tosca Strong (`#5fe3c6`), and the erase brush is the design system's danger (`#f59a86`). Warnings stay orange, blocked edges red and the region palette as it was: those are data colors, and they read well on the dark canvas.
+
+## v0.2 — Civ-style terrain (24 Nov 2026, Claudia)
+
+- **D205 — Terrain looks like Civilization V and VI: world-tiled ground textures blended across hex borders, not one picture per hex.** E, 24 Nov 2026: "Civ-style terrain NOW." **Why:** loading Lexie's Dordogne hexes as the plain tiles (branch `scratch/dordogne-proof`) showed the limit of per-hex art. The art fit the engine exactly (the `top` UV mapping is right), and grass and meadow read as fields. But a single tile per terrain makes a honeycomb, and every border between terrains is a hard zigzag. Auto-tiling, as in RPG Maker or Lexie's 563-tile pack, fixes borders by drawing transitions: on hexes that is a set per pair of terrains, and it still repeats per hex. The Civ approach moves the work into the engine. **What it is** (`FOUNDATION_DESIGN.md` v6, section 6.6a):
+  - **Ground textures** sampled in world space, so a field continues across borders.
+  - **A blend of up to three terrains per vertex** on the D194 geometry: pure in the inner hex, linear across half bridges to 50/50 at the border, barycentric in corners, none across cliffs, frayed by world-space noise.
+  - **Cliff textures** tiled in face space.
+  - **Deterministic decoration**, visual only.
+  - **A hex grid overlay**, off in the player and on in the editor.
+  - **Schema 3.1:** `TerrainDef` gains `ground`, `cliffTexture` and `decor`; `top` becomes optional and keeps working (per-hex mode), so v0.1 projects render as before.
+  - **Not in this decision:** rivers and roads along edges (later), seasonal texture swaps (Phase 22).
+  - **What artists deliver:** `ART_CONTRACT.md`.
+  - **Who:** E or Claudia-Code implements, as workstream W8 in `V0.2_PLAN.md`. *(6.6, 6.6a, 6.7, 8, 9.2; PHASE15 4.1 and Q2)*
+- **D206 — Spec housekeeping that came with D205.** The foundation spec still described ramps in its data model (`MapDef.layers.ramp`, "an optional ramp", 4 bytes per cell). Those lines now match schema 3 (D195). Section 6.3 carries a note that the ramp model is superseded by D194. The ramp text in the Phase 3–5 plans (sections 2, 6.3, 7, 8 and the Phase 5 fixture list) is kept as the record of what was planned, not rewritten.
+

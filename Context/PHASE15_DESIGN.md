@@ -184,7 +184,7 @@ Within one map (a trapdoor to a sealed cellar region on the same map), the same 
 
 The area map is a top-down picture of the current map, drawn from the layers. No art is authored.
 
-- **Each cell:** the average colour of its terrain's top frame, computed when the atlas is baked and cached per terrain.
+- **Each cell:** its terrain's `ground.mapColor` when set, otherwise the average color of its ground texture (stored at upload), otherwise the average color of its `top` frame (computed when the atlas is baked). Cached per terrain. *(Civ-style terrain, FOUNDATION_DESIGN 6.6a, D205.)*
 - **Height:** each cliff level darkens by 6% downward from the highest. Cliff edges are drawn as 1 px lines. Ramps get a chevron.
 - **Interiors:** floors in a lighter tone, with wall cells outlined.
 - **Output:** one off-screen texture per map at 2 px per hex (512 × 512 at most). It is redrawn only for dirty cells: map edits in the editor, reveal updates in play.
@@ -460,7 +460,7 @@ A 256 × 256 map's bitset is 8 KB raw, usually under 1 KB after RLE. A save with
 | # | Question | Lean |
 |---|---|---|
 | Q1 | Doors that open and close | **Later.** Doorways only in v1. A door needs a toggleable collider and a sight blocker on an entity, which F's terrain-only `castSegment` does not have. Backlog: "entity occluders". |
-| Q2 | Should a terrain author be able to override its area map colour? | **Not yet.** The baked average is enough. Add an optional `mapColor` only when a real map looks wrong. |
+| Q2 | Should a terrain author be able to override its area map color? | **Answered by D205:** `SurfaceTexture.mapColor` exists from v6 of the foundation spec, and defaults to the texture's average color. Per-hex terrains still use the baked average. |
 | Q3 | Fast travel from anywhere outdoors (Skyrim style), as a project setting? | **No.** It conflicts with "only from travel points". Revisit if a game asks for it. |
 | Q4 | Companions and mounts on fast travel | They are `persistent`, so they come along automatically when Phases 20.5 and 21 land. Nothing to decide now. |
 

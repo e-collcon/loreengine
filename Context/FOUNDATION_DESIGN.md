@@ -12,6 +12,7 @@ This document replaces v0 Phases 1–5 with a layered engine foundation, and fol
 
 | Rev | Change | Why |
 | --- | --- | --- |
+| v6 | **Civ-style terrain** (section 6.6a): ground textures tiled in world space and blended across hex borders, cliff textures, scattered decoration, an optional hex grid overlay. `TerrainDef` gains `ground`, `cliffTexture` and `decor`; `top` becomes optional and stays for per-hex art. Art requirements moved to `ART_CONTRACT.md` | E, 24 Nov 2026: terrain should look like Civilization V and VI, not like a board of hex tiles (D205) |
 | v5 | Q11 and Q12 decided; jump links in pathfinding put on the backlog; Emberfall clarified as a test map only; first attribute set to come from Planet Reset | E's answers, 17 Nov; this is the version handed to Fable |
 | v4 | Renamed **LoreEngine**; scripted jumps specified (section 7.9c); every open question decided except Q11 and Q12; authored attributes applied in Phase 6 v6 and noted in Phases 7, 9, 10, 11 | E's answers, later on 16 Nov |
 | v3 | Q1, Q5, Q9, Q16 decided; click-to-act orders specified (section 7.9b); `InputFrame.moveTo` replaced by `order`; 16 cliff levels; Q15's lean changed to authored attributes | E's answers on 16 Nov, and the engine is now explicitly for our own repeated use |
@@ -249,6 +250,9 @@ interface ProjectSettings {
   sight: { uphillBlocked: boolean;      // default true (WC3 high ground)
            uphillRevealRange: number }; // world units; default 1.5
   friendlyFire: boolean;          // global default; Phase 18 adds per-source overrides
+  terrainBlend?: { noise: number;    // v6 (6.6a): how much the border frays, 0..1; default 0.35
+                   softness: number; // 0 = hard but irregular edges; default 0.25
+                   gridOpacity: number }; // hex grid overlay when the player turns it on; default 0.12
 }
 ```
 
@@ -277,18 +281,36 @@ interface AtlasDef {
 interface FrameRef { atlasId: Id<'atlas'>; frame: string }
 ```
 
-**Terrain and maps, with elevation.** Each hex has a terrain, a cliff level, and an optional ramp. Layers are packed typed arrays, stored as base64 in files.
+**Terrain and maps, with elevation.** Each hex has a terrain and a level. One level apart is a walkable terraced slope; two or more is a cliff (D194; the ramp layer was removed in schema 3, D195). Layers are packed typed arrays, stored as base64 in files.
 
 ```ts
 interface TerrainDef {
   id: Id<'terrain'>; name: string;
-  top: FrameRef;                  // the hex top
-  cliff?: FrameRef;               // side-face art; default is a neutral engine face
+  ground?: SurfaceTexture;        // v6: Civ-style surface, tiled in world space and blended (6.6a); wins over `top`
+  cliffTexture?: SurfaceTexture;  // v6: cliff faces tiled in world space (6.6a); wins over `cliff`
+  decor?: DecorDef;               // v6: scattered decoration sprites (6.6a)
+  top?: FrameRef;                 // per-hex art, one image per hex (v0.1); optional since v6
+  cliff?: FrameRef;               // per-face art (v0.1); default is a neutral engine face
   passable: { walk: boolean; swim: boolean; fly: boolean }; // read by P4 passability
   moveCost: number;               // A* multiplier, >= 1
   blocksSight: boolean;           // default: !walk && !swim
   blocksProjectiles: boolean;     // default: blocksSight
   contact?: { everyMs: number; actions: Action[] }; // lava; read by P4 terrain contact
+}
+
+// v6 (6.6a): schema 3.1, a minor revision (SCHEMA_MINOR 1). Every schema 3.0 project stays valid;
+// a 3.1 file opened by a 3.0 build gets the newer-version message. Each new leaf needs a readers.ts entry.
+interface SurfaceTexture {
+  asset: Id<'asset'>;             // a square, seamlessly tiling image: SVG, PNG or WebP (ART_CONTRACT.md)
+  repeat: number;                 // world units per repeat, > 0; default 4 for ground (about 2.3 hexes across), 2 for cliffs
+  scroll?: { x: number; y: number }; // world units per second, for flowing water; default none
+  mapColor?: string;              // #rrggbb for the area map and minimap; default: the texture's average color
+}
+
+interface DecorDef {
+  items: { frame: FrameRef; weight: number; scale?: [number, number] }[]; // sprites with an anchor at their base
+  perCell: number;                // average items per hex, 0 to 8
+  onSlopes: boolean;              // false: only on the flat inner hex
 }
 
 type HexDir = 1 | 2 | 3 | 4 | 5 | 6; // the six neighbors, in the ported module's order
@@ -300,8 +322,7 @@ interface MapDef {
   layers: {
     terrain: Uint16Array;         // length width*height
     level: Uint8Array;            // 0..maxLevel
-    ramp: Uint8Array;             // 0 = none; 1..6 = the HexDir the ramp rises toward
-  };
+  };                              // schema 3: no ramp layer (D195)
   playerStart?: { x: number; y: number; facing: number }; // required on the start map
   placements: EntityPlacement[];  // never the player: it spawns from playerArchetypeId
   regions: RegionDef[];
@@ -725,13 +746,15 @@ At the end of Phase 3, Emberfall's terrain renders in hex-iso with cliffs and ra
 | Deferred | Owner |
 | --- | --- |
 | Day and night (the tint seam ships here, unused) | Phase 14 |
-| Weather, seasonal tile variants | Phase 22 |
+| Weather, seasonal texture swaps | Phase 22 |
 | Ambience, distance attenuation | Phase 19 |
 | World map, fast travel | Phase 15 |
 | Authored flight altitude, swimming behavior | Phase 21 |
 | Skeletal animation rigs | Q4 |
 
 ### 6.3 The central decision: one elevation model, three consumers
+
+> **Superseded in part (D193–D199, 20 Nov 2026).** The principle stands: one height function, read by movement, sight and the renderer. The ramp model below does not: the engine now follows Catlike Coding's Hex Map, with flat inner hexes, terraced slopes between cells one level apart and cliffs at two or more. `DECISIONS_LOG.md` D194 is the current rule. The ramp text in this section and in the Phase 3–5 plans is kept as the record of what was planned.
 
 Every hex is a column. Its height comes from its cliff level; a ramp tilts its top so it rises one level toward one neighbor. Passability, sight, and rendering all read the same two runtime queries, so a cliff that blocks walking always blocks sight and is always drawn.
 
@@ -783,7 +806,7 @@ The renderer is PixiJS on WebGL (Q3). It reads the runtime view and never writes
 
 **Projection.** The ported hex-iso projection places `(x, y)`; height lifts the point by `z × pixelsPerUnit × zoom` screen pixels.
 
-**Terrain as meshes.** Each hex top is drawn as a seven-vertex mesh (center plus six corners), each vertex lifted by the surface height there. Ramps therefore render correctly from the same top texture, with no per-direction ramp art. Cliff faces are quads between a cell's edge height and its neighbor's, tiled with the terrain's `cliff` frame, drawn only on the camera-facing edges. Geometry is built per row strip and rebuilt only when the map is edited.
+**Terrain as meshes.** Since D194 the terrain follows Catlike Coding's Hex Map: each cell draws a flat inner hex, half bridges to its neighbors and corner regions where three cells meet, every vertex lifted by the runtime's surface height, with terraced slopes between levels one apart and cliff faces on the camera-facing edges where levels differ by two or more. Geometry is built per row strip and rebuilt only when the map is edited. **How that geometry is textured is section 6.6a.**
 
 **Depth order.** The draw list is row strips, back to front. Each entity is inserted after the strip containing its feet; within a strip, terrain first, then entities by foot screen position. So a unit behind a cliff is covered by the cliff's face, and a unit on the plateau draws over the ground below it. This is the riskiest piece in the foundation; it is prototyped first (section 10).
 
@@ -799,6 +822,71 @@ The renderer is PixiJS on WebGL (Q3). It reads the runtime view and never writes
 
 **Assets.** The renderer resolves `AssetRef`s through a resolver the client injects. It never imports `storage`, so swapping the storage backend later changes no renderer code.
 
+### 6.6a Terrain surface: Civ-style (v6)
+
+**Goal.** The ground reads as one continuous landscape, as in Civilization V and VI, not as a board of hex tiles: no hex-shaped repetition, no zigzag borders between terrains, and life on the ground from scattered decoration. The hex grid is an overlay the player can turn on, not something the art draws. Gameplay does not change: every cell still has exactly one terrain, and passability, cost, sight and contact read it as before.
+
+**Two surface modes, chosen per terrain.**
+
+| Mode | When | Drawn as |
+| --- | --- | --- |
+| **Ground** (v6) | `ground` is set | The texture tiled in world space and blended with the neighbors (below) |
+| **Per-hex** (v0.1) | Only `top` is set | The `top` frame stretched over the cell's whole mesh, as today. Kept so v0.1 projects and hex-tile packs still work |
+| **Neutral** | Neither is set | A flat fill in the engine's neutral gray |
+
+Within one map, cells of different modes may touch; they do not blend, so their border stays hard. A map should use one mode; the editor's lint warns when it mixes them.
+
+**1. Sampling in world space.** A ground cell's texture is sampled at the world position of each pixel on the ground plane (`u = x / repeat`, `v = y / repeat`, in world units), not at the cell's own coordinates. So a field continues across hex borders with no seam, and the texture repeats every `repeat` world units regardless of where the hexes are. Because the projection foreshortens the ground plane, **ground textures are drawn straight top-down**, never pre-squashed (ART_CONTRACT.md).
+
+**2. Blending across borders.** Every terrain vertex carries up to three terrains (the cells whose regions meet there) and a weight for each; the fragment color is the weighted sum of the three ground samples. The weights follow the geometry D194 already builds:
+
+| Region | Weights |
+| --- | --- |
+| Inner hex (`SOLID_FACTOR` of the cell) | The cell's own terrain, 1 |
+| Half bridge from cell A toward neighbor B | B's weight rises linearly with horizontal distance, from 0 at A's inner edge to 0.5 at the shared border; A's falls to match. On a slope it ignores the terraces. B's own half bridge mirrors it, so the two meet at 50/50 with no seam |
+| Corner region of A, B and C | The barycentric weights its height uses (D194), over the cells it is linked to. A cell cut off by cliffs keeps its own terrain in its share of the corner |
+| Across a cliff edge | No blending: the two surfaces do not touch. Each side keeps its own terrain to the border |
+
+Weights sum to 1 at every vertex. Slopes blend like flat edges, and rises keep the darker shade they have today.
+
+**Breaking the straight line** (should, not must). A blend that is a straight gradient along every bridge still shows the hex outline faintly. The renderer frays it with a shared engine noise texture (four channels, sampled in world space); each terrain reads the channel picked by its palette index, so both cells at a border compute the same result:
+
+```
+hᵢ  = wᵢ + (noiseᵢ − 0.5) × n        // n: settings.terrainBlend.noise, default 0.35
+w′ᵢ = max(hᵢ − max(h) + s, 0)         // s: settings.terrainBlend.softness, default 0.25
+w′ᵢ = w′ᵢ / Σ w′                       // the largest hᵢ always keeps s, so the sum is never 0
+```
+
+Inside the inner hex the own terrain still wins outright (its `h` exceeds the others' by more than `s`), so the fraying stays in the bridges and corners. This is what makes a meadow fray into a field instead of meeting it along a line. With `n` = 0 it is the plain linear blend.
+
+**3. Cliff faces.** A face with `cliffTexture` samples it in face space: `u` is the distance along the edge in world units, `v` is the height in world units, both divided by `repeat`, so the strata of adjoining faces line up and a tall cliff repeats vertically. The face uses the **upper** cell's terrain. Without `cliffTexture`, the `cliff` frame or the neutral face is used, as today. The two camera-facing tones stay.
+
+**4. Decoration.** Each cell of a terrain with `decor` gets on average `perCell` items, chosen by `weight` and placed by a hash of (map id, cell, slot), so a map always decorates the same way and an edit only changes the cells it touches.
+- **Where:** items stay inside the inner hex (and on slopes only when `onSlopes`), at least 0.3 world units apart.
+- **Placements win:** none is placed within 0.5 world units of a placement's position, so a placed house never stands in a tree.
+- **Scale:** a uniform random scale inside `scale` (default 0.9 to 1.1) and a random left/right mirror.
+- **Visual only:** decor has no collider and blocks neither sight nor movement. Anything that should block is a placement or a terrain flag. Woods that hide units are a terrain with `blocksSight`, decorated with trees.
+- **Drawing:** like static sprites in the row-strip depth order (6.6), so a unit walks behind a tree in front of it and in front of one behind it; culled with the strips.
+- **Off switch:** a player setting turns decoration off for weak machines.
+
+**5. Hex grid overlay.** A thin line along every cell border, drawn over the ground at a set opacity (default 0.12) and lifted with the surface. Off by default in the player, with a setting to turn it on (as in Civilization); on by default in the editor, where the Levels overlay already uses it.
+
+**6. Draw cost.** The terrain stays one draw call per row strip:
+- **Textures:** up to 16 ground and cliff textures per project, bound together. A WebGL2 texture array or one shared, padded ground atlas; the implementer chooses.
+- **Mipmaps:** on, with repeat wrapping, so zooming out does not shimmer. That needs power-of-two textures (6.7).
+- **Decor:** batched like sprites.
+- **Budget:** the render budget in 9.1 is unchanged. The bench map gains a ground mode with eight textures and decor at `perCell` 3, and must still meet it.
+
+**Signature tests.**
+- At every vertex of random maps with levels 0..3 and six terrains, the blend weights are non-negative and sum to 1.
+- Weights are continuous across every walkable shared border: both cells compute the same terrains and weights there.
+- Across a cliff edge, each side has weight 1 for its own terrain at the border.
+- World-space sampling: a pixel on the shared border samples the same texture coordinate from both cells.
+- Decoration is deterministic: the same map always gives the same items. Items stay inside their region, at least 0.3 apart, never near a placement, and editing one cell only changes that cell's items.
+- A v0.1 project (only `top`) renders exactly as before (snapshot), and validates without migration.
+- Import refuses a ground texture that is not square or not a power of two, with a message that says so.
+- The render bench in ground mode meets the 8 ms budget on E's machine.
+
 ### 6.7 Vector art pipeline
 
 Vector art is baked, not drawn live, because thousands of SVG paths per frame would cost far more than one batched atlas.
@@ -809,6 +897,13 @@ Vector art is baked, not drawn live, because thousands of SVG paths per frame wo
 4. Pack into atlas pages of at most 4096 × 4096, store pages through `BlobStore`, and write the `AtlasDef`.
 
 Sources stay in the project, so changing `pixelsPerUnit` or adding a tier is a re-bake, never re-drawing.
+
+**Ground and cliff textures (v6) are not atlas frames.** They are image assets used whole:
+- **Accepted:** an SVG is rasterized once, in the browser, to 1024 × 1024; a PNG or WebP is used as it is when it is square and 512 or 1024 px; anything else is refused with a message.
+- **Mipmaps** are built at upload, and the texture's average color is stored as its default `mapColor`.
+- **Decoration sprites** are ordinary atlas frames with an anchor at their base, baked like characters.
+
+What an artist delivers, and in what shape, is in `ART_CONTRACT.md`.
 
 ### 6.8 Animation playback
 
@@ -1148,7 +1243,7 @@ Every database uses one pattern: a list on the left, a form on the right, edits 
 
 | Database | Extras beyond the form |
 | --- | --- |
-| Terrains | Passability matrix, top and cliff frame pickers |
+| Terrains | Passability matrix; ground and cliff texture pickers with a 3 × 3 tiled preview, so seams show; `repeat` and scroll fields; decor items with weights and a density slider; top and cliff frame pickers for per-hex art |
 | Archetypes | Components added and removed as sections |
 | Attacks | Live hitbox preview on a small hex canvas; a timeline bar of windup, active, recovery |
 | Brains | States as a list; transitions as condition rows |
@@ -1239,8 +1334,10 @@ Every cap below is a requirement. The two time budgets are targets to verify: no
 | Rolling autosaves | 3 (default) | Oldest evicted |
 | Map size | 256 × 256 cells | Validator rejects |
 | Atlas page | 4096 × 4096 px | Packer opens a new page |
+| Ground and cliff textures per project | 16 | Import refused |
+| Decoration items per map | 32,768 | Lowest-weight items dropped, diagnostic |
 
-Memory per map cell is 4 bytes (terrain index 2, level 1, ramp 1), so the largest map's layers take 256 KB.
+Memory per map cell is 3 bytes (terrain index 2, level 1; the ramp byte went with schema 3), so the largest map's layers take 192 KB. Ground textures (v6) add at most 16 × about 1.4 MB of GPU memory at 512 px with mipmaps, or 16 × about 5.6 MB at 1024 px.
 
 ### 9.3 Lifetimes
 
