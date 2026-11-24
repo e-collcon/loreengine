@@ -25,11 +25,11 @@
 | World map form | An authored **node graph** of locations, drawn over a painted image. |
 | Local navigation | An **auto-drawn area map and minimap**, built from the terrain layers, revealed as the player explores. |
 | Fast travel | **Only from travel points.** It costs money and game time, and is never allowed in combat. |
-| Discovery | On entering a region, plus a scripted `discover-location` action (a bought map, a told rumour). |
+| Discovery | On entering a region, plus a scripted `discover-location` action (a bought map, a told rumor). |
 | **Going indoors** | **Seamless.** Ground floors share the street's map: walk through the door, the roof and front walls fade, and the street stays visible around the building. No loading screen. |
 | Upper floors, cellars, dungeons | Separate maps joined by two-ended portals, with a ~0.3 s fade. |
 
-**Why seamless interiors are cheap here.** The engine already has every hard part: regions with enter and exit events, terrain that blocks sight and movement, and a mesh renderer. An interior is a region with a flag; walls are raised terrain cells; the cutaway is a fade on the camera-facing wall cells and the roof sprites. The new renderer work is a per-vertex alpha and tint attribute on the terrain meshes, about half a chunk. Multi-storey buildings inside one map would be expensive, since every system would have to understand stacked floors at the same (q, r). So upper floors stay separate maps.
+**Why seamless interiors are cheap here.** The engine already has every hard part: regions with enter and exit events, terrain that blocks sight and movement, and a mesh renderer. An interior is a region with a flag; walls are raised terrain cells; the cutaway is a fade on the camera-facing wall cells and the roof sprites. The new renderer work is a per-vertex alpha and tint attribute on the terrain meshes, about half a chunk. Multi-story buildings inside one map would be expensive, since every system would have to understand stacked floors at the same (q, r). So upper floors stay separate maps.
 
 ---
 
@@ -109,7 +109,7 @@ Side and back walls are never faded, so the room keeps its shape and the street 
 - Each interior's shell becomes a precomputed list of vertex ranges per row strip. A transition writes those ranges only.
 - No geometry rebuild and no allocation (budget §12).
 
-**The occlusion silhouette** (F §6.6) still applies. Anything that still covers the player, such as a neighbouring building, draws the silhouette.
+**The occlusion silhouette** (F §6.6) still applies. Anything that still covers the player, such as a neighboring building, draws the silhouette.
 
 ```ts
 interface ComponentData {
@@ -185,7 +185,7 @@ Within one map (a trapdoor to a sealed cellar region on the same map), the same 
 The area map is a top-down picture of the current map, drawn from the layers. No art is authored.
 
 - **Each cell:** its terrain's `ground.mapColor` when set, otherwise the average color of its ground texture (stored at upload), otherwise the average color of its `top` frame (computed when the atlas is baked). Cached per terrain. *(Civ-style terrain, FOUNDATION_DESIGN 6.6a, D205.)*
-- **Height:** each cliff level darkens by 6% downward from the highest. Cliff edges are drawn as 1 px lines. Ramps get a chevron.
+- **Height:** each cliff level darkens by 6% downward from the highest. Cliff edges are drawn as 1 px lines. A one-level slope gets no line: the shade step shows it (there are no ramps since D194).
 - **Interiors:** floors in a lighter tone, with wall cells outlined.
 - **Output:** one off-screen texture per map at 2 px per hex (512 × 512 at most). It is redrawn only for dirty cells: map edits in the editor, reveal updates in play.
 
@@ -197,7 +197,7 @@ The area map is a top-down picture of the current map, drawn from the layers. No
 
 - Every 10 ticks, if the player's cell changed, the runtime reveals a disc of `revealRadius` hexes around it. The default is the player's `sight.range`.
 - **No line-of-sight test,** Diablo-style. It is cheap and players expect it.
-- `reveal-area` (a bought map, a told rumour) reveals a whole map, or one region.
+- `reveal-area` (a bought map, a told rumor) reveals a whole map, or one region.
 
 ### 4.3 Interiors on the map
 
@@ -215,7 +215,7 @@ Markers are a projection of the runtime view. The runtime never stores them.
 
 ### 4.5 Where it appears
 
-- **Minimap:** a 160 px round overlay in the HUD (`player` package), north-up, centred on the player, hideable in settings.
+- **Minimap:** a 160 px round overlay in the HUD (`player` package), north-up, centered on the player, hideable in settings.
 - **Full area map:** on the Map tab of Phase 11's menu.
 - **Toggle:** a new `map` input action in the input actions list (F `role` gains `'map'`). Default key: M.
 
@@ -260,7 +260,7 @@ interface WorldRouteDef {
 - `anchorKey` must exist on `mapId` and carry `interactable`.
 - `discoverRegionId` must be on `mapId`.
 - A route's two ends must differ.
-- A node with no routes is flagged: it can be discovered but never travelled to.
+- A node with no routes is flagged: it can be discovered but never traveled to.
 
 ### 5.2 Discovery
 
