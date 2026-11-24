@@ -1,3 +1,4 @@
+import { DORDOGNE } from './dordogne-art.ts';
 /**
  * Placeholder art and sound, generated in code (kickoff §3.6): nothing
  * waits on real art. Every frame is a small SVG of simple shapes, named by
@@ -158,6 +159,7 @@ function figureSvg(kind: string, clip: string, frame: number): string {
 /** The SVG source for one atlas frame name, e.g. `terrain/grass` or `hero/slash-active/0`. */
 export function svgForFrame(frame: string): string {
   const parts = frame.split('/');
+  if (parts[0] === 'terrain' && DORDOGNE[parts[1] ?? '']) return DORDOGNE[parts[1]!]!;
   if (parts[0] === 'terrain') return parts[1] === 'cliff' ? cliffSvg() : terrainSvg(parts[1] ?? 'stone');
   if (parts[0] === 'fx') return sparkSvg();
   return figureSvg(parts[0] ?? 'sentry', parts[1] ?? 'idle', Number(parts[2] ?? 0));

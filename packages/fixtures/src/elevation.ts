@@ -95,6 +95,18 @@ export function buildElevation(): Project {
   paintA.fill(A.pond, T.water, 0);
   paintA.fill({ ...A.pillar, w: 1, h: 1 }, T.rock, 0);
   paintA.fill({ ...A.spire, w: 1, h: 1 }, T.rock, 3);
+  // SCRATCH: a woods patch, then three looks per family, picked per cell by a fixed hash.
+  // Palette: 0 grass, 1 dirt, 2 stone, 3 lava, 4 water, 5 rock, 6-7 grass-b/c, 8-9 dirt-b/c, 10-11 stone-b/c, 12-14 woods a/b/c.
+  paintA.fill({ col: 12, row: 8, w: 4, h: 3 }, 12, 0);
+  {
+    const fam: Record<number, number[]> = { 0: [0, 6, 7], 1: [1, 8, 9], 2: [2, 10, 11], 12: [12, 13, 14] };
+    for (let i = 0; i < paintA.terrain.length; i++) {
+      const col = i % A.width;
+      const row = Math.floor(i / A.width);
+      const opts = fam[paintA.terrain[i]!];
+      if (opts) paintA.terrain[i] = opts[(((col * 73856093) ^ (row * 19349663)) >>> 0) % 3]!;
+    }
+  }
 
   const terracesId = id('map', 'terraces');
   const cellarId = id('map', 'cellar');

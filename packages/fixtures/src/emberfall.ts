@@ -163,6 +163,9 @@ export function buildEmberfall(): Project {
     }),
     terrain('water', { walk: false, swim: true, fly: true }),
     terrain('rock', { walk: false, swim: false, fly: false }),
+
+    // SCRATCH: Dordogne variants, appended so existing palette indices stay put.
+    ...['grass-b', 'grass-c', 'dirt-b', 'dirt-c', 'stone-b', 'stone-c', 'woods', 'woods-b', 'woods-c'].map((n) => terrain(n, land)),
   ];
 
   /* ---- variables ------------------------------------------------------- */
