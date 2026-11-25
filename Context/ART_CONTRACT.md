@@ -41,12 +41,15 @@ The engine tiles each ground texture across the whole map in world space and ble
 4. **Even, with no standouts.** The texture repeats every 4 units, so one memorable feature (a lone flower, a big rock, a puddle) shows up as a pattern across the map.
    - Keep the largest feature under about 1/8 of the texture (128 px).
    - Standouts belong in decoration (section 3).
-5. **Narrow value range.** Keep brightness within a tight band around the texture's average, so tiling makes no blotches.
+5. **Even at large scale, with contrast up close.**
+   - Averaged over any 128 px square, brightness stays close to the texture's average, so tiling makes no blotches. As a guide, 128 px block averages stay within about ±3 brightness steps (of 255) of each other.
+   - Fine detail (blades, leaves, pebbles) still needs clear contrast against the ground around it, because the game shows the texture at about a quarter size. As a guide, aim for a brightness standard deviation of about 8–15 steps across the texture.
+   - Batch 1's ground textures, at 3–5 steps, read as flat paint in the game view (25 Nov).
 6. **Mid-values.** Avoid near-black and near-white. The engine blends neighboring textures, and a very dark texture next to a very light one makes a muddy band where they meet.
 7. **No strong baked light.** The engine does not light the ground. If small things cast shadows, keep them soft and falling straight down the image (south).
 
 **Should**
-- **Make terrains easy to tell apart.** Distinct terrains should differ in hue and in average brightness. The texture's average color becomes the terrain's color on the area map and minimap.
+- **Make terrains easy to tell apart.** Distinct terrains should differ in hue and in average brightness. The texture's average color becomes the terrain's color on the area map and minimap. Batch 1's meadow (#989c65) and grassland (#86945c) were too close.
 - **Split the work with decoration.** The texture carries the fine grain (grass, leaf litter, gravel); decoration carries the things you notice (trees, boulders, flower clumps).
 - **Keep each file under 2 MB.** Sources stay in the project and travel with every export. An SVG too dense for that is better sent as a PNG or WebP.
 
